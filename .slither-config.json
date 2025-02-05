@@ -1,0 +1,5 @@
+{
+  "disable_detectors": [
+    "inline-assembly"
+  ]
+}
