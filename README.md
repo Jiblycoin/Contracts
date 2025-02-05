@@ -1,13 +1,37 @@
-# Sample Hardhat Project
+Jiblycoin
+An upgradeable, diamond-pattern ERC20 token on Binance Smart Chain (BSC) with staking, governance, bridging, burn mechanics, loyalty rewards, and optional NFT gating.
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a Hardhat Ignition module that deploys that contract.
-
-Try running some of the following tasks:
-
-```shell
-npx hardhat help
-npx hardhat test
-REPORT_GAS=true npx hardhat test
-npx hardhat node
-npx hardhat ignition deploy ./ignition/modules/Lock.js
-```
+Key Features
+Diamond Architecture: Modular and upgradeable facets
+Staking: Stake tokens in multiple pools
+Governance: On-chain proposals, voting, and execution
+Loyalty Rewards: Referral system, holding bonuses, monthly burn/buyback
+Bridging: Cross-chain bridging via Allbridge
+NFT Integration: Optional NFT-based exclusivity for certain features
+Upgradeable: Timelocked upgrades with admin roles
+Repository Structure
+contracts/ – Main Solidity source (facets, libraries, diamond core)
+scripts/ – Deployment and management scripts
+tests/ – Automated tests using Hardhat/Chai
+docs/ – Detailed documentation
+Getting Started
+Install Dependencies: npm install or yarn install
+Compile: npx hardhat compile
+Test: npx hardhat test
+Deploy: npx hardhat run scripts/deploy.js --network bscTestnet
+Ensure you have a .env with your PRIVATE_KEY and RPC URLs
+Documentation
+SmartContractArchitecture.md
+TokenomicsOverview.md
+GovernanceMechanism.md
+StakingGuide.md
+NFTIntegration.md
+UpgradeGuide.md
+CrossChainBridge.md
+Security
+Built-in pausable & circuit breaker logic
+Reentrancy guards
+Admin role-based access
+Audit recommended before mainnet launch
+License
+MIT
