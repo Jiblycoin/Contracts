@@ -3,12 +3,14 @@ pragma solidity ^0.8.27;
 
 import "../core/JiblycoinCore.sol";
 import "../libraries/DiamondStorageLib.sol";
-import "../libraries/Errors.sol";
 import "../structs/JiblycoinStructs.sol";
+import "../libraries/Errors.sol";
 
 /**
  * @title JiblycoinGovernance
- * @dev Provides governance functionalities such as proposal creation, voting, delegation, and execution.
+ * @notice Provides governance functionalities including proposal creation, voting, delegation, and execution.
+ * @dev Extends JiblycoinCore and uses centralized storage via DiamondStorageLib.
+ *      Functions are non‑reentrant, pausable, and use custom errors from Errors.sol.
  */
 abstract contract JiblycoinGovernance is JiblycoinCore {
     using DiamondStorageLib for DiamondStorageLib.DiamondStorage;
@@ -44,11 +46,11 @@ abstract contract JiblycoinGovernance is JiblycoinCore {
         string memory category,
         uint64 executionTime
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
-        require(bytes(description).length > 0, "No description");
-        require(bytes(category).length > 0, "No category");
-        require(executionTime > 0, "Invalid execution time");
+        if (bytes(description).length == 0) revert Errors.NoDescription();
+        if (bytes(category).length == 0) revert Errors.NoCategory();
+        if (executionTime == 0) revert Errors.ExecTimeZero();
 
+        DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
         proposalCount++;
         JiblycoinStructs.Proposal storage newProp = ds.proposals[proposalCount];
         newProp.id = proposalCount;
@@ -95,8 +97,8 @@ abstract contract JiblycoinGovernance is JiblycoinCore {
     function delegate(address delegatee, uint256 amount) external nonReentrant whenNotPaused {
         if (delegatee == address(0)) revert Errors.ZeroAddress();
         if (delegatee == msg.sender) revert Errors.ZeroAddress();
-        DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
         if (balanceOf(msg.sender) < amount) revert Errors.InsufficientBalance();
+        DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
         ds.delegations[msg.sender][delegatee] += amount;
         emit Delegated(msg.sender, delegatee, amount);
     }

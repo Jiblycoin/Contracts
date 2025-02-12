@@ -1,20 +1,29 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import "../interfaces/IJiblycoinOracle.sol";
+import { IJiblycoinOracle } from "../interfaces/IJiblycoinOracle.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "../libraries/Errors.sol";
 
+/**
+ * @title JiblycoinOracle
+ * @notice Provides the current market condition factor for dynamic fee adjustments in the Jiblycoin ecosystem.
+ * @dev Implements the IJiblycoinOracle interface and uses Ownable for access control.
+ *      The market condition factor can be updated by the contract owner.
+ */
 contract JiblycoinOracle is IJiblycoinOracle, Ownable {
-    // The market condition factor (e.g., 100 represents +1% adjustment).
+    /// @notice Market condition factor (e.g., 100 represents a +1% adjustment).
     uint256 private marketConditionFactor;
 
+    /**
+     * @notice Emitted when the market condition factor is updated.
+     * @param newFactor The new market condition factor.
+     */
     event MarketConditionFactorUpdated(uint256 newFactor);
 
     /**
-     * @dev Sets the initial market condition factor.
-     * The deployer becomes the owner automatically.
-     * @param _initialFactor The starting market condition factor.
+     * @notice Initializes the oracle with a starting market condition factor.
+     * @param _initialFactor The initial market condition factor.
      */
     constructor(uint256 _initialFactor) Ownable(msg.sender) {
         marketConditionFactor = _initialFactor;
@@ -22,14 +31,15 @@ contract JiblycoinOracle is IJiblycoinOracle, Ownable {
 
     /**
      * @notice Returns the current market condition factor.
-     * @return marketConditionFactor The current market condition factor.
+     * @return The current market condition factor.
      */
     function getMarketConditionFactor() external view override returns (uint256) {
         return marketConditionFactor;
     }
 
     /**
-     * @notice Allows the owner to update the market condition factor.
+     * @notice Updates the market condition factor.
+     * @dev Only callable by the contract owner.
      * @param newFactor The new market condition factor.
      */
     function updateMarketConditionFactor(uint256 newFactor) external onlyOwner {

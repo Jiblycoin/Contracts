@@ -1,23 +1,32 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import { JiblycoinCore } from "../core/JiblycoinCore.sol";
-import { JiblycoinStructs } from "../structs/JiblycoinStructs.sol";
-import { DiamondStorageLib } from "../libraries/DiamondStorageLib.sol";
-import { Errors } from "../libraries/Errors.sol";
-import { IJiblycoinOracle } from "../interfaces/IJiblycoinOracle.sol";
-import { IJiblycoinNFT } from "../interfaces/IJiblycoinNFT.sol";
+import "../core/JiblycoinCore.sol";
+import "../structs/JiblycoinStructs.sol";
+import "../libraries/DiamondStorageLib.sol";
+import "../libraries/Errors.sol";
+import "../interfaces/IJiblycoinNFT.sol";
 
-error CannotStakeZero();
-error PoolDoesNotExist();
-error InsufficientStakedBalance();
-error MustHoldNFT();
-
+/**
+ * @title JiblycoinStaking
+ * @notice Implements staking functionality for Jiblycoin.
+ * @dev Users can stake tokens in various pools to earn rewards. Reward rates are dynamically
+ * adjusted based on market conditions via an oracle.
+ */
 abstract contract JiblycoinStaking is JiblycoinCore {
+    // Mapping from pool ID to staking pool details.
     mapping(uint256 => JiblycoinStructs.StakingPool) public stakingPools;
+
+    // Array of staking pool IDs.
     uint256[] public poolIds;
+
+    // Mapping from pool ID to staked amounts per user.
     mapping(uint256 => mapping(address => uint256)) public stakedAmounts;
+
+    // Mapping from pool ID to accrued reward debt per user.
     mapping(uint256 => mapping(address => uint256)) public rewardDebt;
+
+    // Mapping from user address and pool ID to the last reward timestamp.
     mapping(address => mapping(uint256 => uint256)) public lastRewardTimestamp;
 
     event StakingPoolAdded(uint256 indexed id, string name, uint256 baseRewardRate, bool exclusive);
@@ -37,7 +46,7 @@ abstract contract JiblycoinStaking is JiblycoinCore {
         uint256 baseRewardRate,
         bool exclusive
     ) external onlyRole(ADMIN_ROLE) {
-        if (stakingPools[id].id != 0) revert PoolDoesNotExist();
+        if (stakingPools[id].id != 0) revert Errors.PoolDoesNotExist();
         stakingPools[id] = JiblycoinStructs.StakingPool({
             id: id,
             name: name,
@@ -51,7 +60,7 @@ abstract contract JiblycoinStaking is JiblycoinCore {
     }
 
     function adjustPoolReward(uint256 poolId) external onlyRole(ADMIN_ROLE) {
-        if (stakingPools[poolId].id == 0) revert PoolDoesNotExist();
+        if (stakingPools[poolId].id == 0) revert Errors.PoolDoesNotExist();
         if (address(jiblycoinOracle) == address(0)) revert Errors.OracleNotSet();
         uint256 marketFactor = IJiblycoinOracle(jiblycoinOracle).getMarketConditionFactor();
         uint256 newRate = (stakingPools[poolId].baseRewardRate * marketFactor) / 10000;
@@ -70,12 +79,12 @@ abstract contract JiblycoinStaking is JiblycoinCore {
     }
 
     function stake(uint256 amount, uint256 poolId) external whenNotPaused nonReentrant {
-        if (amount == 0) revert CannotStakeZero();
-        if (stakingPools[poolId].id == 0) revert PoolDoesNotExist();
+        if (amount == 0) revert Errors.CannotStakeZero();
+        if (stakingPools[poolId].id == 0) revert Errors.PoolDoesNotExist();
 
         if (stakingPools[poolId].exclusive) {
             IJiblycoinNFT nftContract = IJiblycoinNFT(_getNFTContractAddress());
-            if (nftContract.balanceOf(msg.sender) == 0) revert MustHoldNFT();
+            if (nftContract.balanceOf(msg.sender) == 0) revert Errors.MustHoldNFT();
         }
 
         _updateRewards(poolId, msg.sender);
@@ -86,9 +95,9 @@ abstract contract JiblycoinStaking is JiblycoinCore {
     }
 
     function unstake(uint256 amount, uint256 poolId) external whenNotPaused nonReentrant {
-        if (amount == 0) revert CannotStakeZero();
-        if (stakingPools[poolId].id == 0) revert PoolDoesNotExist();
-        if (stakedAmounts[poolId][msg.sender] < amount) revert InsufficientStakedBalance();
+        if (amount == 0) revert Errors.CannotStakeZero();
+        if (stakingPools[poolId].id == 0) revert Errors.PoolDoesNotExist();
+        if (stakedAmounts[poolId][msg.sender] < amount) revert Errors.InsufficientStakedBalance();
         _updateRewards(poolId, msg.sender);
         stakedAmounts[poolId][msg.sender] -= amount;
         stakingPools[poolId].totalStaked -= amount;
@@ -97,7 +106,7 @@ abstract contract JiblycoinStaking is JiblycoinCore {
     }
 
     function claimRewards(uint256 poolId) external whenNotPaused nonReentrant {
-        if (stakingPools[poolId].id == 0) revert PoolDoesNotExist();
+        if (stakingPools[poolId].id == 0) revert Errors.PoolDoesNotExist();
         _updateRewards(poolId, msg.sender);
         uint256 reward = rewardDebt[poolId][msg.sender];
         if (reward == 0) revert Errors.AlreadyClaimed();

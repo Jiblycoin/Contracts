@@ -3,10 +3,21 @@ pragma solidity ^0.8.27;
 
 import "../structs/JiblycoinStructs.sol";
 
+/**
+ * @title DiamondStorageLib
+ * @notice Provides centralized storage for the Jiblycoin ecosystem using the diamond pattern.
+ * @dev Defines the main storage structure (DiamondStorage) that holds all state variables,
+ *      and provides helper functions for accessing storage and managing roles.
+ */
 library DiamondStorageLib {
-    /// @dev The storage slot for DiamondStorage.
+    /// @notice The unique storage slot for the DiamondStorage structure.
     bytes32 internal constant DIAMOND_STORAGE_POSITION = keccak256("diamond.standard.diamond.storage");
 
+    /**
+     * @notice Centralized storage structure for Jiblycoin.
+     * @dev Contains state variables for admin management, facets, fees, governance, staking, burn,
+     *      loyalty rewards, upgrades, and more.
+     */
     struct DiamondStorage {
         // Admin Management
         address adminWallet;
@@ -84,26 +95,45 @@ library DiamondStorageLib {
         uint256 jiblyHoodPool;
     }
 
-    /// @dev Returns the diamond storage.
+    /**
+     * @notice Retrieves the diamond storage pointer.
+     * @dev Uses a unique storage slot specified by DIAMOND_STORAGE_POSITION.
+     * @return ds The DiamondStorage struct stored at the designated slot.
+     */
     function diamondStorage() internal pure returns (DiamondStorage storage ds) {
         bytes32 position = DIAMOND_STORAGE_POSITION;
-        // slither-disable-next-line inline-assembly
         assembly {
             ds.slot := position
         }
     }
 
-    /// @dev Checks if an account has a specific role.
+    /**
+     * @notice Checks if an account has a specific role.
+     * @param ds The DiamondStorage struct.
+     * @param role The role identifier.
+     * @param account The address to check.
+     * @return True if the account possesses the specified role, otherwise false.
+     */
     function hasRole(DiamondStorage storage ds, bytes32 role, address account) internal view returns (bool) {
         return ds.roles[role][account];
     }
 
-    /// @dev Grants a role to an account.
+    /**
+     * @notice Grants a specific role to an account.
+     * @param ds The DiamondStorage struct.
+     * @param role The role identifier.
+     * @param account The address to which the role will be granted.
+     */
     function grantRole(DiamondStorage storage ds, bytes32 role, address account) internal {
         ds.roles[role][account] = true;
     }
 
-    /// @dev Revokes a role from an account.
+    /**
+     * @notice Revokes a specific role from an account.
+     * @param ds The DiamondStorage struct.
+     * @param role The role identifier.
+     * @param account The address from which the role will be revoked.
+     */
     function revokeRole(DiamondStorage storage ds, bytes32 role, address account) internal {
         ds.roles[role][account] = false;
     }
