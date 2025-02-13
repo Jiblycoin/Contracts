@@ -25,7 +25,7 @@ contract JiblycoinStakingFacet is JiblycoinStaking {
         DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
         require(hasRole(ds.ADMIN_ROLE, msg.sender), "Not authorized");
         require(ds.poolIds.length == 0, "Already initialized");
-        __JiblycoinStaking_init();
+        __jiblycoinStakingInit(); // Corrected function call (lowercase 'j')
     }
 
     /**

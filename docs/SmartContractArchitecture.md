@@ -1,123 +1,51 @@
 # Smart Contract Architecture
 
-This document details the technical design of Jiblycoin’s diamond‑pattern architecture and how each facet contributes to the overall functionality.
+This document provides a detailed overview of Jiblycoin’s technical design using the diamond‑pattern architecture and explains the responsibilities of each facet.
 
----
+## 1. Overview of the Diamond Pattern
+- **Modularity & Upgradeability**: The diamond pattern segments functionality into multiple facets, each of which can be upgraded independently.
+- **Centralized Storage**: All facets share a single state storage defined in `DiamondStorageLib.DiamondStorage`, ensuring a unified data model.
+- **Function Routing**: The main proxy (JiblycoinDiamond.sol) delegates calls to the appropriate facet based on function selectors.
 
-## Overview of the Diamond Pattern
-- **Why Diamond?** It allows modular design, easy upgrades, and a smaller per‑facet contract size.
-- **Key Contracts**:
-  1. **JiblycoinDiamond.sol** – The diamond’s main proxy.
-  2. **Facets** – Each facet contains a cohesive set of functions:
-     - **CoreFacet**: Core ERC20 token logic (transfer, balances, etc.)
-     - **GovernanceFacet**: Proposal creation, voting, execution
-     - **StakingFacet**: Staking pools, claiming rewards
-     - **BurnFacet**: Burn logic with cooldown
-     - **LoyaltyFacet**: Referral and loyalty points
-     - **LockEligibilityFacet**: Locking / vesting
-     - **BridgeFacet**: Allbridge integration for cross-chain
-     - **UpgradeFacet**: Timelocked upgrade mechanics
-     - **DiamondLoupeFacet**: EIP‑2535 “loupe” introspection
-- **Storage Layout**:
-  - All storage is centralized in `DiamondStorageLib.DiamondStorage`, so facets share state.
+## 2. Key Contracts and Facets
+1. **JiblycoinDiamond.sol**
+   - The proxy contract that implements delegatecall-based routing.
+2. **Core Facet (JiblycoinCoreFacet.sol)**
+   - Manages token initialization, transfer logic, fee distribution, and updates to key parameters.
+3. **Governance Facet (JiblycoinGovernanceFacet.sol)**
+   - Handles proposal creation, voting, delegation, and execution of governance actions.
+4. **Staking Facet (JiblycoinStakingFacet.sol)**
+   - Implements multiple staking pools, calculates rewards, and supports both standard and exclusive (NFT gated) staking.
+5. **Burn Facet (JiblycoinBurnFacet.sol)**
+   - Provides rate-limited token burning with cooldown management.
+6. **Loyalty Facet (JiblycoinLoyaltyFacet.sol)**
+   - Manages loyalty rewards, referral programs, and bonus distributions.
+7. **Lock Eligibility Facet (JiblycoinLockEligibilityFacet.sol)**
+   - Allows token locking for vesting or enhanced eligibility for rewards.
+8. **Bridge Facet (JiblycoinBridgeFacet.sol)**
+   - Integrates with Allbridge to support cross-chain token transfers.
+9. **Upgrade Facet (JiblycoinUpgradeFacet.sol)**
+   - Coordinates upgrade proposals and execution using timelocks and role-based permissions.
+10. **Diamond Loupe Facet (DiamondLoupeFacet.sol)**
+    - Provides introspection methods as defined by EIP‑2535.
 
-## Facet Responsibilities
-1. **JiblycoinCoreFacet**  
-   - General token initialization, bridging config, updates to governance parameters.
-2. **JiblycoinGovernanceFacet**  
-   - Adds proposals, voting, and tracks results.  
-3. **JiblycoinStakingFacet**  
-   - Allows users to stake tokens, calculates rewards, manages multiple staking pools.  
-4. **JiblycoinBurnFacet**  
-   - Implements rate-limited burning for Jibly tokens.  
-5. **JiblycoinLoyaltyFacet**  
-   - Loyalty points, referral logic, monthly buyback/burn triggers.  
-6. **JiblycoinLockEligibilityFacet**  
-   - Lock tokens for vesting or extra eligibility in events (optional).  
-7. **JiblycoinBridgeFacet**  
-   - Cross-chain transfer logic via Allbridge.  
-8. **JiblycoinUpgradeFacet**  
-   - Coordinates upgrades using UUPS pattern with timelocked proposals.  
+## 3. Integration of External Protocols
+- **Chainlink VRF**: 
+  - The core contract integrates Chainlink VRF to securely request randomness (e.g., for random rewards).
+- **Allbridge**: 
+  - Used for cross-chain transfers, allowing Jiblycoin to move tokens between blockchains.
 
-## Contracts Folder Structure
-Jiblycoin/
-├── contracts/
-│   ├── burn/
-│   │   └── JiblycoinBurn.sol
-│   ├── core/
-│   │   └── JiblycoinCore.sol
-│   ├── diamond/
-│   │   └── JiblycoinDiamond.sol
-│   ├── facets/
-│   │   ├── DiamondLoupeFacet.sol
-│   │   ├── JiblycoinCoreFacet.sol
-│   │   ├── JiblycoinGovernanceFacet.sol
-│   │   ├── JiblycoinLoyaltyFacet.sol
-│   │   ├── JiblycoinStakingFacet.sol
-│   │   ├── JiblycoinLockEligibilityFacet.sol
-│   │   ├── JiblycoinUpgradeFacet.sol
-│   │   ├── JiblycoinBurnFacet.sol
-│   │   └── JiblycoinBridgeFacet.sol
-│   ├── governance/
-│   │   ├── JiblycoinGovernance.sol
-│   │   └── GovernanceManager.sol
-│   ├── interfaces/
-│   │   ├── IJiblycoin.sol
-│   │   ├── IJiblycoinNFT.sol
-│   │   ├── IJiblycoinOracle.sol
-│   │   └── IAllbridgeCore.sol
-│   ├── libraries/
-│   │   ├── DiamondStorageLib.sol
-│   │   ├── Errors.sol
-│   │   ├── FeeLibrary.sol
-│   │   ├── JiblycoinLibraries.sol
-│   │   ├── VotingLib.sol
-│   │   └── JiblycoinLoyaltyLib.sol
-│   ├── lockeligibility/
-│   │   ├── JiblycoinLockEligibility.sol
-│   │   └── LockingManager.sol
-│   ├── loyaltyrewards/
-│   │   └── JiblycoinLoyaltyRewards.sol
-│   ├── nft/
-│   │   └── JiblycoinNFT.sol
-│   ├── oracle/
-│   │   └── JiblycoinOracle.sol
-│   ├── staking/
-│   │   ├── JiblycoinStaking.sol
-│   │   └── StakingManager.sol
-│   ├── structs/
-│   │   └── JiblycoinStructs.sol
-│   ├── upgrade/
-│   │   └── JiblycoinUpgrade.sol
-│   └── utils/
-│       └── JiblycoinUtils.sol
-├── scripts/
-│   └── deploy.js
-├── tests/
-│   └── DummyOracle.sol
-│   └── Jiblycoin.Smoke.test.js
-│   └── Lock.js
-├── README.md
-├── LICENSE
-└── docs/
-    ├── SmartContractArchitecture.md
-    ├── GovernanceMechanism.md
-    ├── TokenomicsOverview.md
-    ├── StakingGuide.md
-    ├── NFTIntegration.md
+## 4. Storage Layout & Security
+- **DiamondStorageLib**: Centralizes state variables (including fees, roles, staking data, governance proposals, and more) to avoid storage collisions.
+- **Security Measures**: Reentrancy guards, pausable functions, and strict role-based access control are implemented throughout the facets.
+- **Upgradability**: Facets are designed to be replaced individually without redeploying the entire system.
 
-## Upgradability Flow
-1. **Propose Upgrade**: Admin calls `proposeUpgrade(newImplementation)`.
-2. **Wait Timelock**: Must wait for `upgradeDelay` seconds.
-3. **Execute Upgrade**: Calls `executeUpgrade(newImplementation)`, triggers `_authorizeUpgrade` checks, finalizes upgrade.
-
-## Advantages & Tradeoffs
+## 5. Advantages & Tradeoffs
 - **Advantages**:
-  - Modular, maintainable
-  - Smaller facet contract size, easier to audit individually
-  - Upgrades possible without redeploying entire system
+  - High modularity, easier audits, and targeted upgrades.
+  - Reduced per-facet contract size for better gas efficiency.
+  - Flexibility to integrate new protocols (e.g., Chainlink VRF, Allbridge).
 - **Tradeoffs**:
-  - Complexity of diamond routing
-  - Must carefully manage storage collisions in DiamondStorage
-  - Must carefully handle upgrades to prevent malicious code injection
-
+  - Increased architectural complexity.
+  - Must manage storage layout carefully to avoid collisions.
+  - Upgrades must be performed cautiously to maintain system security.

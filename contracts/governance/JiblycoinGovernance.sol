@@ -6,12 +6,6 @@ import "../libraries/DiamondStorageLib.sol";
 import "../structs/JiblycoinStructs.sol";
 import "../libraries/Errors.sol";
 
-/**
- * @title JiblycoinGovernance
- * @notice Provides governance functionalities including proposal creation, voting, delegation, and execution.
- * @dev Extends JiblycoinCore and uses centralized storage via DiamondStorageLib.
- *      Functions are non‑reentrant, pausable, and use custom errors from Errors.sol.
- */
 abstract contract JiblycoinGovernance is JiblycoinCore {
     using DiamondStorageLib for DiamondStorageLib.DiamondStorage;
 
@@ -97,8 +91,8 @@ abstract contract JiblycoinGovernance is JiblycoinCore {
     function delegate(address delegatee, uint256 amount) external nonReentrant whenNotPaused {
         if (delegatee == address(0)) revert Errors.ZeroAddress();
         if (delegatee == msg.sender) revert Errors.ZeroAddress();
-        if (balanceOf(msg.sender) < amount) revert Errors.InsufficientBalance();
         DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
+        if (balanceOf(msg.sender) < amount) revert Errors.InsufficientBalance();
         ds.delegations[msg.sender][delegatee] += amount;
         emit Delegated(msg.sender, delegatee, amount);
     }

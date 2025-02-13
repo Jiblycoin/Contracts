@@ -3,8 +3,8 @@ pragma solidity ^0.8.27;
 
 import "../core/JiblycoinCore.sol";
 import "../libraries/DiamondStorageLib.sol";
-import "../libraries/Errors.sol";
 import "../structs/JiblycoinStructs.sol";
+import "../libraries/Errors.sol";
 
 contract JiblycoinGovernanceFacet is JiblycoinCore {
     using DiamondStorageLib for DiamondStorageLib.DiamondStorage;
@@ -28,18 +28,15 @@ contract JiblycoinGovernanceFacet is JiblycoinCore {
 
     uint64 public proposalCount;
 
-    function initGovernanceFacet(
+    function __JiblycoinGovernance_init(
         JiblycoinStructs.GovernanceParameters memory _governanceParams,
         JiblycoinStructs.RewardCapsStruct memory _govPointsCaps,
         address _adminWallet
-    ) external {
+    ) internal onlyInitializing {
         DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
-        require(ds.hasRole(ds.ADMIN_ROLE, msg.sender), "Not authorized");
-        require(ds.governanceParams.quorumPercentage == 0, "Already initialized");
         ds.governanceParams = _governanceParams;
         ds.govPointsCaps = _govPointsCaps;
-        ds.adminWallet = _adminWallet;
-        emit GovernanceInitialized(_governanceParams, _govPointsCaps, _adminWallet);
+        _setupRole(DEFAULT_ADMIN_ROLE, _adminWallet);
     }
 
     function createProposal(
@@ -47,11 +44,11 @@ contract JiblycoinGovernanceFacet is JiblycoinCore {
         string memory category,
         uint64 executionTime
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
-        require(bytes(description).length > 0, "No description");
-        require(bytes(category).length > 0, "No category");
-        require(executionTime > 0, "Invalid execution time");
+        if (bytes(description).length == 0) revert Errors.NoDescription();
+        if (bytes(category).length == 0) revert Errors.NoCategory();
+        if (executionTime == 0) revert Errors.ExecTimeZero();
 
+        DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
         proposalCount++;
         JiblycoinStructs.Proposal storage newProp = ds.proposals[proposalCount];
         newProp.id = proposalCount;
@@ -91,7 +88,6 @@ contract JiblycoinGovernanceFacet is JiblycoinCore {
         emit ProposalExecuted(proposalId);
     }
 
-    // Remove unused parameter name from getDelegatee
     function getDelegatee(address) external pure returns (address) {
         return address(0);
     }

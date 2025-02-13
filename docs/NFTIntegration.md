@@ -1,24 +1,25 @@
 # NFT Integration
 
-Describes the optional JiblycoinNFT usage, including gating of pools, loyalty tiers, or special privileges.
+This document explains how the JiblycoinNFT contract is integrated into the ecosystem to provide exclusive features and enhanced user incentives.
 
 ## 1. JiblycoinNFT Contract
-- **Symbol**: JBNFT
-- **Minting**: Admin can call `mint(to, tokenId)`.
-- **Pausing**: Not implemented yet (placeholder only).
+- **Token Symbol**: JBNFT
+- **Minting**:
+  - Admins with the `MINTER_ROLE` can mint NFTs by calling `mint(to, tokenId)`.
+- **Upgradeable**:
+  - Built on OpenZeppelin’s ERC721Upgradeable, the contract is upgradeable.
+- **Pausing**:
+  - Pause functions are currently placeholders; future work may add full pause/unpause capabilities.
 
 ## 2. Use Cases
-- **Exclusive Staking Pools**: Some pools require `balanceOf(msg.sender) > 0` to stake.
-- **Higher Loyalty Multipliers**: Owning a JBNFT could yield extra loyalty points or reduce fees.
+- **Exclusive Staking Pools**:
+  - Certain staking pools require that users hold at least one JBNFT (verified via `balanceOf(msg.sender)`).
+- **Enhanced Loyalty Rewards**:
+  - Ownership of JBNFTs may provide additional loyalty multipliers or reduce transaction fees.
+- **Future Extensions**:
+  - Potential for rarities, expanded metadata, or integration with bridging mechanisms.
 
-## 3. Implementation Details
-- Located in `contracts/nft/JiblycoinNFT.sol`, inherits from OpenZeppelin’s `ERC721Upgradeable`.
-- Deployed once, then set in the diamond’s storage via `setNFTContractAddress(...)`.
-
-## 4. Extending NFT Functionality
-- You can add rarities, metadata expansions, or bridging features for the NFT. The contract is upgradeable, so new facets could be introduced in the future.
-
-## 5. Minting Policies
-- Initially only the `MINTER_ROLE` can mint. 
-- For public minting or sales, consider adding logic for pricing, supply caps, etc.
-
+## 3. Integration Details
+- **Deployment**: The NFT contract is deployed separately from the diamond.
+- **Configuration**: Its address is stored in diamond storage via `setNFTContractAddress(...)` and is referenced by facets (e.g., Staking Facet) to enforce NFT-based eligibility.
+- **Security**: Only authorized roles can mint or modify NFT settings.

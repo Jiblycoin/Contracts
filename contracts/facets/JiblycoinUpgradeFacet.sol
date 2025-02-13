@@ -1,19 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import "../upgrade/JiblycoinUpgrade.sol";
-import "../libraries/Errors.sol";
+import { JiblycoinUpgrade, AlreadyProposed, NotProposed } from "../upgrade/JiblycoinUpgrade.sol";
+import { Errors } from "../libraries/Errors.sol";
 
-/**
- * @title JiblycoinUpgradeFacet
- * @notice Facet for managing contract upgrades for Jiblycoin.
- * @dev Extends JiblycoinUpgrade and integrates:
- *      - Detailed NatSpec documentation
- *      - Custom error usage for gas savings (e.g., ExecTimeZero)
- *      - Non‑reentrant protection and pausable checks (inherited from core)
- *      - Role‑based access control (only ADMIN_ROLE can propose/execute upgrades)
- *      - Centralized storage via the diamond pattern
- */
+/// @title JiblycoinUpgradeFacet
+/// @notice Facet for managing contract upgrades for Jiblycoin.
+/// @dev Extends JiblycoinUpgrade. This facet calls the initializer __jiblycoinUpgradeInit.
 contract JiblycoinUpgradeFacet is JiblycoinUpgrade {
     /**
      * @notice Initializes the upgrade facet with a specified upgrade delay.
@@ -21,7 +14,7 @@ contract JiblycoinUpgradeFacet is JiblycoinUpgrade {
      * @param _upgradeDelay The delay (in seconds) required before an upgrade can be executed.
      */
     function initUpgradeFacet(uint64 _upgradeDelay) external initializer {
-        __JiblycoinUpgrade_init(_upgradeDelay);
+        __jiblycoinUpgradeInit(_upgradeDelay);
     }
 
     /**
@@ -32,7 +25,7 @@ contract JiblycoinUpgradeFacet is JiblycoinUpgrade {
      */
     function proposeNewUpgrade(address newImplementation) external onlyRole(ADMIN_ROLE) whenNotPaused {
         if (newImplementation == address(0)) revert Errors.ZeroAddress();
-        require(pendingUpgrades[newImplementation] == 0, "Already proposed");
+        if (pendingUpgrades[newImplementation] != 0) revert AlreadyProposed();
         pendingUpgrades[newImplementation] = block.timestamp + upgradeDelay;
         emit UpgradeProposed(newImplementation, pendingUpgrades[newImplementation]);
     }
@@ -45,7 +38,7 @@ contract JiblycoinUpgradeFacet is JiblycoinUpgrade {
      */
     function executeProposedUpgrade(address newImplementation) external nonReentrant whenNotPaused {
         uint256 executeTime = pendingUpgrades[newImplementation];
-        require(executeTime != 0, "Not proposed");
+        if (executeTime == 0) revert NotProposed();
         if (block.timestamp < executeTime) revert Errors.ExecTimeZero();
         _authorizeUpgrade(newImplementation);
         _upgradeTo(newImplementation);

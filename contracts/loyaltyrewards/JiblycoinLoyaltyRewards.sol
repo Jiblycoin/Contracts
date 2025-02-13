@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import "../core/JiblycoinCore.sol";
-import "../libraries/DiamondStorageLib.sol";
-import "../libraries/Errors.sol";
-import "../libraries/JiblycoinLoyaltyLib.sol";
+// Use named imports only.
+import { JiblycoinCore } from "../core/JiblycoinCore.sol";
+import { DiamondStorageLib } from "../libraries/DiamondStorageLib.sol";
+import { Errors } from "../libraries/Errors.sol";
+import { JiblycoinLoyaltyLib } from "../libraries/JiblycoinLoyaltyLib.sol";
+import { JiblycoinStructs } from "../structs/JiblycoinStructs.sol";
 
 /**
  * @title JiblycoinLoyaltyRewards

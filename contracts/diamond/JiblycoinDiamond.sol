@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import "../libraries/DiamondStorageLib.sol";
+import { DiamondStorageLib } from "../libraries/DiamondStorageLib.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol"; // Import the Address library
 
-/**
- * @title JiblycoinDiamond
- * @notice Acts as the central proxy for the Jiblycoin system, delegating calls to registered facets.
- * @dev Implements the diamond storage pattern via DiamondStorageLib. Only the admin can update facets.
- *      All calls that do not match any function in this contract are delegated to the corresponding facet.
- */
+// Custom errors can be defined in your Errors.sol file;
+// For this example, we'll assume they are defined as follows:
+error InitializationFailed();
+error FunctionDoesNotExist();
+error NotAuthorized();
+
 contract JiblycoinDiamond {
     // ------------------------------------------------------------------------
     // Constructor
@@ -22,9 +23,10 @@ contract JiblycoinDiamond {
         DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
         ds.adminWallet = _admin;
         if (_initCalldata.length > 0) {
-            // Delegatecall to the provided initialization function.
-            (bool success, ) = address(this).delegatecall(_initCalldata);
-            require(success, "Initialization failed");
+            // Use OpenZeppelin's functionDelegateCall instead of a low-level delegatecall.
+            // This avoids low-level calls and performs error checking internally.
+            // If the call fails, the helper will revert.
+            Address.functionDelegateCall(address(this), _initCalldata);
         }
     }
 
@@ -48,12 +50,13 @@ contract JiblycoinDiamond {
      */
     function setFacets(DSFacetCut[] calldata cuts) external {
         DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
-        require(ds.adminWallet == msg.sender, "Not authorized");
+        if (msg.sender != ds.adminWallet) revert NotAuthorized();
         for (uint256 i = 0; i < cuts.length; i++) {
             DSFacetCut calldata cut = cuts[i];
             for (uint256 j = 0; j < cut.selectors.length; j++) {
                 ds.facets[cut.selectors[j]] = cut.facetAddress;
-                // Optionally, add the selector to the functionSelectors array if not already present.
+                // Optionally, you could check if the selector already exists in ds.functionSelectors
+                // and add it if not present.
             }
         }
     }
@@ -63,25 +66,17 @@ contract JiblycoinDiamond {
     // ------------------------------------------------------------------------
     /**
      * @notice Fallback function that delegates calls to the appropriate facet.
-     * @dev Uses inline assembly for efficiency. The function selector (msg.sig) is used to determine the facet.
+     * @dev Uses OpenZeppelin's Address.functionDelegateCall for delegation.
+     *      Inline assembly is used only to return the result.
      */
     fallback() external payable {
         DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
         address facet = ds.facets[msg.sig];
-        require(facet != address(0), "Function does not exist");
+        if (facet == address(0)) revert FunctionDoesNotExist();
+        bytes memory result = Address.functionDelegateCall(facet, msg.data);
+        // solhint-disable-next-line no-inline-assembly
         assembly {
-            // Copy msg.data.
-            calldatacopy(0, 0, calldatasize())
-            // Delegatecall to the facet.
-            let result := delegatecall(gas(), facet, 0, calldatasize(), 0, 0)
-            // Retrieve returned data size.
-            let size := returndatasize()
-            // Copy returned data.
-            returndatacopy(0, 0, size)
-            // Revert on error, return on success.
-            switch result
-            case 0 { revert(0, size) }
-            default { return(0, size) }
+            return(add(result, 32), mload(result))
         }
     }
 

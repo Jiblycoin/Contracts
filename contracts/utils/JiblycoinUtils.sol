@@ -1,11 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-/**
- * @title JiblycoinUtils
- * @notice Provides utility functions for the Jiblycoin ecosystem.
- * @dev Includes conversion functions, safe arithmetic operations, and address conversion to string.
- */
+/// @notice Custom error thrown when an addition operation overflows.
+error AdditionOverflow();
+
+/// @notice Custom error thrown when a subtraction operation underflows.
+error SubtractionUnderflow();
+
+/// @notice Custom error thrown when a multiplication operation overflows.
+error MultiplicationOverflow();
+
+/// @title JiblycoinUtils
+/// @notice Provides utility functions for the Jiblycoin ecosystem.
+/// @dev Includes conversion functions, safe arithmetic operations, and address conversion to string.
 library JiblycoinUtils {
     /**
      * @notice Converts a uint256 value to its ASCII string decimal representation.
@@ -37,7 +44,7 @@ library JiblycoinUtils {
      */
     function safeAdd(uint256 a, uint256 b) internal pure returns (uint256) {
         uint256 c = a + b;
-        if (c < a) revert("AdditionOverflow");
+        if (c < a) revert AdditionOverflow();
         return c;
     }
 
@@ -48,7 +55,7 @@ library JiblycoinUtils {
      * @return The difference of a and b.
      */
     function safeSub(uint256 a, uint256 b) internal pure returns (uint256) {
-        if (b > a) revert("SubtractionUnderflow");
+        if (b > a) revert SubtractionUnderflow();
         return a - b;
     }
 
@@ -61,7 +68,7 @@ library JiblycoinUtils {
     function safeMul(uint256 a, uint256 b) internal pure returns (uint256) {
         if (a == 0) return 0;
         uint256 c = a * b;
-        if (c / a != b) revert("MultiplicationOverflow");
+        if (c / a != b) revert MultiplicationOverflow();
         return c;
     }
 

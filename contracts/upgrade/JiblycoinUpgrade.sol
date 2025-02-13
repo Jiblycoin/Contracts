@@ -1,39 +1,34 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import "../core/JiblycoinCore.sol";
-import "../libraries/Errors.sol";
+// Instead of global imports, we import only the required symbols.
+import { JiblycoinCore } from "../core/JiblycoinCore.sol";
+import { Errors } from "../libraries/Errors.sol";
 
-/**
- * @title JiblycoinUpgrade
- * @notice Manages the upgrade mechanism for Jiblycoin using the UUPS proxy pattern.
- * @dev Extends JiblycoinCore. Defines an upgrade delay and a mapping for pending upgrades.
- *      Provides functions for proposing and executing upgrades, with detailed NatSpec documentation,
- *      custom error usage for gas savings, non‑reentrancy, and role‑based access control.
- */
+/// @notice Thrown when an upgrade has already been proposed.
+error AlreadyProposed();
+/// @notice Thrown when an upgrade was not proposed.
+error NotProposed();
+
+/// @title JiblycoinUpgrade
+/// @notice Manages the upgrade mechanism for Jiblycoin using the UUPS proxy pattern.
+/// @dev Extends JiblycoinCore. Defines an upgrade delay and a mapping for pending upgrades.
+///      Provides functions for proposing and executing upgrades, using custom errors for gas savings.
 abstract contract JiblycoinUpgrade is JiblycoinCore {
     /// @notice Upgrade delay (in seconds) required before an upgrade can be executed.
     uint64 public upgradeDelay;
     /// @notice Mapping from proposed new implementation addresses to the timestamp after which the upgrade can be executed.
     mapping(address => uint256) public pendingUpgrades;
 
-    /**
-     * @notice Emitted when a new upgrade is proposed.
-     * @param newImplementation The address of the proposed new implementation.
-     * @param executeAfter The timestamp after which the upgrade can be executed.
-     */
+    /// @notice Emitted when a new upgrade is proposed.
+    /// @param newImplementation The address of the proposed new implementation.
+    /// @param executeAfter The timestamp after which the upgrade can be executed.
     event UpgradeProposed(address indexed newImplementation, uint256 executeAfter);
-
-    /**
-     * @notice Emitted when an upgrade is executed.
-     * @param newImplementation The address of the new implementation.
-     */
+    /// @notice Emitted when an upgrade is executed.
+    /// @param newImplementation The address of the new implementation.
     event UpgradeExecuted(address indexed newImplementation);
-
-    /**
-     * @notice Emitted when the upgrade delay is updated.
-     * @param newUpgradeDelay The new upgrade delay in seconds.
-     */
+    /// @notice Emitted when the upgrade delay is updated.
+    /// @param newUpgradeDelay The new upgrade delay in seconds.
     event UpgradeDelaySet(uint64 newUpgradeDelay);
 
     /**
@@ -41,33 +36,34 @@ abstract contract JiblycoinUpgrade is JiblycoinCore {
      * @dev Must be called during contract initialization.
      * @param _upgradeDelay The delay (in seconds) before an upgrade can be executed.
      */
-    function __JiblycoinUpgrade_init(uint64 _upgradeDelay) internal onlyInitializing {
+    function __jiblycoinUpgradeInit(uint64 _upgradeDelay) internal onlyInitializing {
         upgradeDelay = _upgradeDelay;
     }
 
     /**
      * @notice Proposes a new implementation for upgrade.
      * @dev Reverts with Errors.ZeroAddress if the new implementation address is zero.
-     *      Reverts if an upgrade for this implementation has already been proposed.
+     *      Reverts with AlreadyProposed if an upgrade for this implementation has already been proposed.
      *      Only callable by an account with the ADMIN_ROLE.
      * @param newImplementation The address of the proposed new implementation.
      */
     function proposeUpgrade(address newImplementation) external onlyRole(ADMIN_ROLE) whenNotPaused {
         if (newImplementation == address(0)) revert Errors.ZeroAddress();
-        require(pendingUpgrades[newImplementation] == 0, "Already proposed");
+        if (pendingUpgrades[newImplementation] != 0) revert AlreadyProposed();
         pendingUpgrades[newImplementation] = block.timestamp + upgradeDelay;
         emit UpgradeProposed(newImplementation, pendingUpgrades[newImplementation]);
     }
 
     /**
      * @notice Executes a previously proposed upgrade.
-     * @dev Reverts if the upgrade delay has not passed or if the implementation was not proposed.
+     * @dev Reverts with NotProposed if the upgrade was not proposed.
+     *      Reverts with Errors.ExecTimeZero if the upgrade delay has not passed.
      *      Protected by non‑reentrancy and pausable modifiers.
      * @param newImplementation The address of the new implementation.
      */
     function executeUpgrade(address newImplementation) external nonReentrant whenNotPaused {
         uint256 executeTime = pendingUpgrades[newImplementation];
-        require(executeTime != 0, "Not proposed");
+        if (executeTime == 0) revert NotProposed();
         if (block.timestamp < executeTime) revert Errors.ExecTimeZero();
         _authorizeUpgrade(newImplementation);
         _upgradeTo(newImplementation);

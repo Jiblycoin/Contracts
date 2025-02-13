@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import "../loyaltyrewards/JiblycoinLoyaltyRewards.sol";
+// Use named import with the correct path
+import { JiblycoinLoyaltyRewards } from "../loyaltyrewards/JiblycoinLoyaltyRewards.sol";
 
 /**
  * @title JiblycoinLoyaltyFacet

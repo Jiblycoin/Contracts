@@ -3,8 +3,9 @@ pragma solidity ^0.8.27;
 
 /**
  * @title Errors
- * @notice Defines custom errors used throughout the Jiblycoin ecosystem.
+ * @notice This library defines custom errors used throughout the Jiblycoin ecosystem.
  * @dev Using custom errors instead of revert strings provides gas savings during failed executions.
+ * Each error is documented with NatSpec to explain its purpose.
  */
 library Errors {
     /// @notice Thrown when an attempt is made to burn zero tokens.
@@ -53,8 +54,21 @@ library Errors {
     error Blacklisted();
 
     // Additional errors for staking:
+
+    /// @notice Thrown when a referenced staking pool does not exist.
     error PoolDoesNotExist();
+
+    /// @notice Thrown when an attempt is made to stake zero tokens.
     error CannotStakeZero();
+
+    /// @notice Thrown when a staking pool requires NFT ownership but the user does not hold one.
     error MustHoldNFT();
+
+    /// @notice Thrown when the staked balance is insufficient for an unstaking operation.
     error InsufficientStakedBalance();
+
+    // Added error for duplicate pools:
+
+    /// @notice Thrown when an attempt is made to create a staking pool that already exists.
+    error PoolAlreadyExists();
 }

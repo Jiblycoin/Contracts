@@ -2,20 +2,27 @@
 pragma solidity ^0.8.27;
 
 // Import OpenZeppelin upgradeable contracts
-import { Initializable }         from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { ERC20Upgradeable }       from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { ERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import { PausableUpgradeable }    from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import { UUPSUpgradeable }        from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 // Import your libraries and interfaces
-import { FeeLibrary as FeeLib }   from "../libraries/FeeLibrary.sol";
-import { JiblycoinUtils }         from "../utils/JiblycoinUtils.sol";
+import { FeeLibrary as FeeLib } from "../libraries/FeeLibrary.sol";
+import { JiblycoinUtils } from "../utils/JiblycoinUtils.sol";
 import { JiblycoinStructs as JStructs } from "../structs/JiblycoinStructs.sol";
-import { IJiblycoinOracle }       from "../interfaces/IJiblycoinOracle.sol";
-import { Errors }               from "../libraries/Errors.sol";
-import { DiamondStorageLib }    from "../libraries/DiamondStorageLib.sol";
+import { IJiblycoinOracle } from "../interfaces/IJiblycoinOracle.sol";
+import { Errors } from "../libraries/Errors.sol";
+import { DiamondStorageLib } from "../libraries/DiamondStorageLib.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
+
+/// @dev Declare a new error for an invalid signature.
+error InvalidSignature();
+
+/// @dev Declare a new error for function call failure.
+error FunctionCallFailed();
 
 /**
  * @dev Simplified Chainlink VRF interface.
@@ -56,13 +63,13 @@ abstract contract JiblycoinCore is
     // Role Constants
     // ====================================================
     /// @notice Admin role constant.
-    bytes32 public constant ADMIN_ROLE    = keccak256("ADMIN_ROLE");
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     /// @notice Upgrader role constant.
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
     /// @notice Security role constant.
     bytes32 public constant SECURITY_ROLE = keccak256("SECURITY_ROLE");
     /// @notice Bridge role constant.
-    bytes32 public constant BRIDGE_ROLE   = keccak256("BRIDGE_ROLE");
+    bytes32 public constant BRIDGE_ROLE = keccak256("BRIDGE_ROLE");
 
     // ====================================================
     // Event Declarations
@@ -82,8 +89,8 @@ abstract contract JiblycoinCore is
     // Constants
     // ====================================================
     uint256 public constant INITIAL_SUPPLY = 10_000_000 * 10**18;
-    uint256 public constant BASE_MULTIPLIER  = 1e18;   // 1x
-    uint256 public constant MAX_MULTIPLIER   = 2e18;   // 2x
+    uint256 public constant BASE_MULTIPLIER = 1e18;   // 1x
+    uint256 public constant MAX_MULTIPLIER = 2e18;      // 2x
     uint256 public constant MULTIPLIER_PERIOD = 30 days;
 
     // ====================================================
@@ -134,7 +141,7 @@ abstract contract JiblycoinCore is
     // ====================================================
     // EIP‑712 Domain Separator for Meta‑Transactions
     // ====================================================
-    bytes32 public DOMAIN_SEPARATOR;
+    bytes32 public domainSeparator;
     bytes32 public constant META_TRANSACTION_TYPEHASH = keccak256("MetaTransaction(uint256 nonce,address from,bytes functionSignature)");
     mapping(address => uint256) public nonces;
 
@@ -177,7 +184,7 @@ abstract contract JiblycoinCore is
      * @param _vrfKeyHash Key hash for Chainlink VRF.
      * @param _vrfFee Fee for Chainlink VRF.
      */
-    function __JiblycoinCore_init(
+    function initializeJiblycoinCore(
         string memory name_,
         string memory symbol_,
         JStructs.FeeParameters memory _feeParams,
@@ -234,7 +241,7 @@ abstract contract JiblycoinCore is
         snapshotId = 0;
 
         // Initialize EIP‑712 Domain Separator.
-        DOMAIN_SEPARATOR = keccak256(
+        domainSeparator = keccak256(
             abi.encode(
                 keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
                 keccak256(bytes(name_)),
@@ -304,15 +311,15 @@ abstract contract JiblycoinCore is
         bytes32 digest = keccak256(
             abi.encodePacked(
                 "\x19\x01",
-                DOMAIN_SEPARATOR,
+                domainSeparator,
                 keccak256(abi.encode(META_TRANSACTION_TYPEHASH, userNonce, user, keccak256(functionSignature)))
             )
         );
-        require(user == ecrecover(digest, sigV, sigR, sigS), "Invalid signature");
+        if (user != ecrecover(digest, sigV, sigR, sigS)) revert InvalidSignature();
         nonces[user] = userNonce + 1;
 
-        (bool success, bytes memory returnData) = address(this).call(abi.encodePacked(functionSignature, user));
-        require(success, "Function call not successful");
+        bytes memory data = abi.encodePacked(functionSignature, user);
+        bytes memory returnData = Address.functionCall(address(this), data);
         emit MetaTransactionExecuted(user, msg.sender, functionSignature);
         return returnData;
     }
@@ -388,8 +395,8 @@ abstract contract JiblycoinCore is
     function claimGasIncentive() external nonReentrant {
         uint256 heldTime = block.timestamp - lastTransferTime[msg.sender];
         uint256 bonus = (heldTime / 1 days) * 1e16;
-        require(bonus > 0, "No incentive available");
-        require(gasIncentivePool >= bonus, "Insufficient incentive pool");
+        if (bonus == 0) revert Errors.InsufficientBalance();
+        if (gasIncentivePool < bonus) revert Errors.InsufficientBalance();
         gasIncentivePool -= bonus;
         _transfer(address(this), msg.sender, bonus);
         emit GasIncentiveClaimed(msg.sender, bonus);
@@ -400,11 +407,11 @@ abstract contract JiblycoinCore is
      */
     function claimLongTermBonus() external nonReentrant {
         uint256 heldTime = block.timestamp - lastTransferTime[msg.sender];
-        require(heldTime >= 90 days, "Holding period too short for bonus");
+        if (heldTime < 90 days) revert Errors.ExecTimeZero();
         uint256 bonusDays = (heldTime - 90 days) / 1 days;
         uint256 bonus = (balanceOf(msg.sender) * bonusDays * 5) / 100000;
-        require(bonus > 0, "No bonus calculated");
-        require(longTermBonusPool >= bonus, "Insufficient bonus pool");
+        if (bonus == 0) revert Errors.InsufficientBalance();
+        if (longTermBonusPool < bonus) revert Errors.InsufficientBalance();
         longTermBonusPool -= bonus;
         _transfer(address(this), msg.sender, bonus);
         emit LongTermBonusClaimed(msg.sender, bonus);
@@ -460,8 +467,12 @@ abstract contract JiblycoinCore is
         uint256 buybackF = (totalFee * feeParams.buybackFeePercentage) / 10000;
         uint256 jiblyHoodF = (totalFee * feeParams.jiblyHoodFeePercentage) / 10000;
 
-        if (baseF > 0) super._transfer(sender, mainWallet, baseF);
-        if (redisF > 0) super._transfer(sender, address(this), redisF);
+        if (baseF > 0) {
+            super._transfer(sender, mainWallet, baseF);
+        }
+        if (redisF > 0) {
+            super._transfer(sender, address(this), redisF);
+        }
         if (burnF > 0) {
             super._transfer(sender, burnAddress, burnF);
             totalBurned += burnF;
@@ -505,7 +516,9 @@ abstract contract JiblycoinCore is
      * @dev Only callable by an account with the UPGRADER_ROLE.
      * @param newImplementation The address of the new implementation.
      */
-    function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {
+        // The onlyRole modifier enforces the authorization.
+    }
 
     uint256[50] private __gap;
 }

@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import { IJiblycoinOracle } from "../interfaces/IJiblycoinOracle.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "../libraries/Errors.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { Errors } from "../libraries/Errors.sol";
 
 /**
  * @title JiblycoinOracle
@@ -11,7 +10,7 @@ import "../libraries/Errors.sol";
  * @dev Implements the IJiblycoinOracle interface and uses Ownable for access control.
  *      The market condition factor can be updated by the contract owner.
  */
-contract JiblycoinOracle is IJiblycoinOracle, Ownable {
+contract JiblycoinOracle is Ownable {
     /// @notice Market condition factor (e.g., 100 represents a +1% adjustment).
     uint256 private marketConditionFactor;
 
@@ -33,7 +32,7 @@ contract JiblycoinOracle is IJiblycoinOracle, Ownable {
      * @notice Returns the current market condition factor.
      * @return The current market condition factor.
      */
-    function getMarketConditionFactor() external view override returns (uint256) {
+    function getMarketConditionFactor() external view returns (uint256) {
         return marketConditionFactor;
     }
 

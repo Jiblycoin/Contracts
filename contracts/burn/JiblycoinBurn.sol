@@ -4,10 +4,16 @@ pragma solidity ^0.8.27;
 import { DiamondStorageLib } from "../libraries/DiamondStorageLib.sol";
 import { Errors } from "../libraries/Errors.sol";
 
+// Define custom errors that were missing in Errors library
+error ReentrantCall();
+error AlreadyPaused();
+error NotPaused();
+error NotAuthorized();
+
 /**
  * @title JiblycoinBurn
  * @notice Implements a burning mechanism with rate limiting.
- * @dev Uses centralized storage via DiamondStorageLib and custom errors from Errors.sol.
+ * @dev Uses centralized storage via DiamondStorageLib and custom errors.
  *
  * Detailed Features:
  * - Non-reentrant protection is applied via a custom modifier.
@@ -72,7 +78,7 @@ contract JiblycoinBurn {
      * @dev Uses a simple status check before and after function execution.
      */
     modifier nonReentrant() {
-        require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
+        if (_status == _ENTERED) revert ReentrantCall();
         _status = _ENTERED;
         _;
         _status = _NOT_ENTERED;
@@ -82,7 +88,7 @@ contract JiblycoinBurn {
      * @notice Ensures that the function is executed only when the contract is not paused.
      */
     modifier whenNotPaused() {
-        require(!_paused, "Pausable: paused");
+        if (_paused) revert AlreadyPaused();
         _;
     }
 
@@ -92,7 +98,7 @@ contract JiblycoinBurn {
      */
     modifier onlyAdmin() {
         DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
-        require(msg.sender == ds.adminWallet, "Not authorized");
+        if (msg.sender != ds.adminWallet) revert NotAuthorized();
         _;
     }
 
@@ -104,7 +110,7 @@ contract JiblycoinBurn {
      * @dev Can only be called by the admin.
      */
     function pause() external onlyAdmin {
-        require(!_paused, "Pausable: already paused");
+        if (_paused) revert AlreadyPaused();
         _paused = true;
         emit Paused(msg.sender);
     }
@@ -114,7 +120,7 @@ contract JiblycoinBurn {
      * @dev Can only be called by the admin.
      */
     function unpause() external onlyAdmin {
-        require(_paused, "Pausable: not paused");
+        if (!_paused) revert NotPaused();
         _paused = false;
         emit Unpaused(msg.sender);
     }
@@ -128,7 +134,7 @@ contract JiblycoinBurn {
     function burnJiblyPoints(uint256 amount) external whenNotPaused nonReentrant {
         if (amount == 0) revert Errors.BurnZero();
         DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
-        require(ds.balances[msg.sender] >= amount, Errors.InsufficientBalance());
+        if (ds.balances[msg.sender] < amount) revert Errors.InsufficientBalance();
         ds.balances[msg.sender] -= amount;
         ds.totalSupply -= amount;
         ds.totalBurned += amount;

@@ -1,32 +1,33 @@
 # Governance Mechanism
 
-This document details the on‑chain governance of Jiblycoin, including proposals, voting power, and execution logic.
+This document details the on-chain governance process for Jiblycoin, including proposal creation, voting, and execution.
 
 ## 1. Overview
-- Governance is primarily handled via the **JiblycoinGovernanceFacet**.
-- Proposals can be created, voted on, and executed if they meet quorum.
+- Governance is managed primarily through the **JiblycoinGovernanceFacet**.
+- Token holders (with a minimum balance, e.g., ≥1 JIBLY) participate in voting on proposals.
+- Voting power is directly proportional to the holder's JIBLY balance.
 
 ## 2. Proposal Lifecycle
-1. **Create Proposal**: Admin or any designated role calls `createProposal(description, category, executionTime)`.
-2. **Voting**: Token holders with >= 1 JIBLY can vote. Voting period runs until `endTime`.
-3. **Execution**: If `voteCount >= quorum`, proposal can be executed. Implementation depends on the category (Fee changes, new features, etc.).
+1. **Proposal Creation**:
+   - Call `createProposal(description, category, executionTime)` with a detailed description, category (e.g., "Fee Adjustment", "New Feature"), and a set execution time.
+2. **Voting**:
+   - Token holders cast votes during the voting period (from `startTime` to `endTime`).
+   - Each vote increases the proposal’s `voteCount` by the voter's token balance.
+3. **Execution**:
+   - Once the voting period ends and if the proposal meets the quorum (e.g., 5% of total supply), it may be executed.
+   - Execution triggers changes based on the proposal category (e.g., fee updates or deploying a new feature facet).
 
-## 3. Roles & Permissions
-- **ADMIN_ROLE**: Has power to create proposals, set governance parameters, act as fallback for emergencies.
-- **DEFAULT_ADMIN_ROLE**: Typically the same address as ADMIN_ROLE initially, can be reassigned to a multisig.
+## 3. Delegation
+- Token holders can delegate their voting power to another address.
+- Delegations are stored in the centralized diamond storage and contribute to the delegate’s effective voting power.
 
-## 4. Quorum & Voting Power
-- **Quorum**: By default, 5% of total supply must vote in favor.
-- **Voting Power**: Equal to JIBLY balance. Future versions may factor in NFT holdings or staked amounts.
+## 4. Roles & Permissions
+- **ADMIN_ROLE**: 
+  - Authorized to create proposals, adjust governance parameters, and execute proposals in emergencies.
+- **DEFAULT_ADMIN_ROLE**:
+  - Initially held by the admin wallet; can later be reassigned to a multisig wallet for improved security.
 
-## 5. Delegation
-- JIBLY holders can delegate their voting power to another address. Delegations are tracked in DiamondStorage.
-
-## 6. Execution Examples
-- **Fee Adjustment**: If the “Fee Adjustment” proposal passes, the contract updates `feeParams`.
-- **New Feature**: Deploy a new facet and tie it to the diamond if the proposal is about adding new logic.
-
-## 7. Security Considerations
-- Time delays to protect from instant malicious proposals.
-- Potential timelock on key changes, e.g., upgrades.
-
+## 5. Security Considerations
+- **Timelocks**: Critical governance actions (especially those affecting upgrades) are subject to timelocks.
+- **Quorum**: A minimum percentage of total supply must vote in order for a proposal to pass.
+- **Delegation Safeguards**: Checks prevent self-delegation or delegation to invalid addresses.

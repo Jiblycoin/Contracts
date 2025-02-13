@@ -1,19 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import "../core/JiblycoinCore.sol";
-import "../libraries/DiamondStorageLib.sol";
-import "../structs/JiblycoinStructs.sol";
-import "../libraries/Errors.sol";
+// Bind exports into namespaces.
+import * as Core from "../core/JiblycoinCore.sol";
+import * as DS from "../libraries/DiamondStorageLib.sol";
+import * as E from "../libraries/Errors.sol";
 
-/**
- * @title JiblycoinCoreFacet
- * @notice Provides administrative functions for updating core parameters of Jiblycoin.
- * @dev Extends JiblycoinCore and uses centralized storage via DiamondStorageLib.
- *      Functions include toggling the circuit breaker, updating anti‑whale limits,
- *      market condition factor, and incentive pools.
- */
-contract JiblycoinCoreFacet is JiblycoinCore {
+contract JiblycoinCoreFacet is Core.JiblycoinCore {
     /**
      * @notice Toggles the circuit breaker to enable or disable critical operations.
      * @dev Only callable by an account with the ADMIN_ROLE.
@@ -44,10 +37,10 @@ contract JiblycoinCoreFacet is JiblycoinCore {
     }
 
     /**
-     * @notice Updates the incentive pools for gas incentives and long-term bonuses.
+     * @notice Updates the incentive pools for gas incentives and long‑term bonuses.
      * @dev Only callable by an account with the ADMIN_ROLE.
      * @param _gasIncentivePool The new value for the gas incentive pool.
-     * @param _longTermBonusPool The new value for the long-term bonus pool.
+     * @param _longTermBonusPool The new value for the long‑term bonus pool.
      */
     function updateIncentivePools(uint256 _gasIncentivePool, uint256 _longTermBonusPool) external onlyRole(ADMIN_ROLE) {
         gasIncentivePool = _gasIncentivePool;

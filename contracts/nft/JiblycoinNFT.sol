@@ -4,10 +4,13 @@ pragma solidity ^0.8.27;
 import { ERC721Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
+/// @notice Custom error for functions that are not implemented.
+error NotImplemented();
+
 /**
  * @title JiblycoinNFT
  * @notice ERC721 NFT contract for the Jiblycoin ecosystem.
- * @dev Implements NFT minting with role-based access control. Detailed NatSpec documentation is included for clarity.
+ * @dev Implements NFT minting with role-based access control. Detailed NatSpec documentation is included.
  */
 contract JiblycoinNFT is ERC721Upgradeable, AccessControlUpgradeable {
     /// @notice Role identifier for accounts allowed to mint NFTs.
@@ -72,18 +75,18 @@ contract JiblycoinNFT is ERC721Upgradeable, AccessControlUpgradeable {
 
     /**
      * @notice Placeholder for pausing the NFT contract.
-     * @dev Not implemented; calling this function will revert.
+     * @dev Not implemented; calling this function will revert with a custom error.
      */
     function pause() external view onlyRole(DEFAULT_ADMIN_ROLE) {
-        revert("Not implemented");
+        revert NotImplemented();
     }
 
     /**
      * @notice Placeholder for unpausing the NFT contract.
-     * @dev Not implemented; calling this function will revert.
+     * @dev Not implemented; calling this function will revert with a custom error.
      */
     function unpause() external view onlyRole(DEFAULT_ADMIN_ROLE) {
-        revert("Not implemented");
+        revert NotImplemented();
     }
 
     /**

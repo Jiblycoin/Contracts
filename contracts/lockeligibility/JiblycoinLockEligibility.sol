@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import "../core/JiblycoinCore.sol";
-import "../structs/JiblycoinStructs.sol";
-import "../libraries/DiamondStorageLib.sol";
-import "../libraries/Errors.sol";
+// Use named imports only.
+import { JiblycoinCore } from "../core/JiblycoinCore.sol";
+import { JiblycoinStructs } from "../structs/JiblycoinStructs.sol";
+import { DiamondStorageLib } from "../libraries/DiamondStorageLib.sol";
+import { Errors } from "../libraries/Errors.sol";
 
 /**
  * @title JiblycoinLockEligibility
@@ -60,7 +61,7 @@ abstract contract JiblycoinLockEligibility is JiblycoinCore {
     event TeamVestingInitialized(address indexed beneficiary, uint256 amount, uint64 vestingDuration, uint64 cliffDuration);
 
     // ====================================================
-    // Initialization Function
+    // Initializer Function
     // ====================================================
     /**
      * @notice Initializes the lock eligibility module.
@@ -83,8 +84,12 @@ abstract contract JiblycoinLockEligibility is JiblycoinCore {
      * @param amount The amount of tokens to lock.
      * @param duration The duration (in seconds) to lock the tokens.
      */
-    function lockTokens(uint256 amount, uint256 duration) external whenNotPaused nonReentrant {
-        if (amount == 0) revert Errors.BurnZero(); // Using BurnZero() as a proxy for "LockZero"
+    function lockTokens(uint256 amount, uint256 duration)
+        external
+        whenNotPaused
+        nonReentrant
+    {
+        if (amount == 0) revert Errors.BurnZero(); // Using BurnZero as a proxy for "LockZero"
         if (duration == 0) revert Errors.ExecTimeZero(); // Proxy error for zero duration
         if (balanceOf(msg.sender) < amount) revert Errors.InsufficientBalance();
         lockedTokens[msg.sender] += amount;
@@ -102,7 +107,11 @@ abstract contract JiblycoinLockEligibility is JiblycoinCore {
      * @param amount The amount of tokens to lock.
      * @param duration The duration (in seconds) for which tokens will be locked.
      */
-    function lockTokensFor(address user, uint256 amount, uint256 duration) public onlyRole(ADMIN_ROLE) whenNotPaused nonReentrant {
+    function lockTokensFor(
+        address user,
+        uint256 amount,
+        uint256 duration
+    ) public onlyRole(ADMIN_ROLE) whenNotPaused nonReentrant {
         if (amount == 0) revert Errors.BurnZero();
         if (user == address(0)) revert Errors.ZeroAddress();
         if (balanceOf(msg.sender) < amount) revert Errors.InsufficientBalance();
@@ -134,7 +143,10 @@ abstract contract JiblycoinLockEligibility is JiblycoinCore {
      * @dev Only callable by an account with the ADMIN_ROLE.
      * @param newAmount The new redistribution pool amount.
      */
-    function adjustRedistributionPool(uint256 newAmount) external onlyRole(ADMIN_ROLE) {
+    function adjustRedistributionPool(uint256 newAmount)
+        external
+        onlyRole(ADMIN_ROLE)
+    {
         redistributionPool = newAmount;
         emit RedistributionPoolAdjusted(newAmount);
     }
