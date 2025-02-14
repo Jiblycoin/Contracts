@@ -1,7 +1,7 @@
 # JiblyCoin Smart Contract Audit Report
 
 ## Audit Summary
-- **Project**: JiblyCoin
+- **Project**: Jiblycoin
 - **Audit Status**: Passed ✅
 
 ## Audit Findings
@@ -685,4 +685,4 @@ Jiblycoin> npx solhint "contracts/**/*.sol"
 ✅ Gas optimizations successfully implemented.
 
 ---
-### **Audit Passed ✅** (JiblyCoin Smart Contract)
+### **Audit Passed ✅** (Jiblycoin Smart Contract)
