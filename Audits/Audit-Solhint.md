@@ -1,4 +1,4 @@
-# JiblyCoin Smart Contract Audit Report
+# Jiblycoin Smart Contract Audit Report
 
 ## Audit Summary
 - **Project**: Jiblycoin
