@@ -12,13 +12,13 @@ import { DiamondStorageLib } from "../libraries/DiamondStorageLib.sol";
 contract LockingManager is JiblycoinLockEligibility {
     /**
      * @notice Initializes the locking mechanism with a specified redistribution pool.
-     * @dev Only callable by an account with the ADMIN_ROLE.
+     * @dev Only callable by an account with the admin role.
      * @param _redistributionPool The initial redistribution pool amount.
      */
     function initializeLocking(uint256 _redistributionPool)
         external
-        onlyRole(DiamondStorageLib.diamondStorage().ADMIN_ROLE)
+        onlyRole(DiamondStorageLib.diamondStorage().adminRole)
     {
-        __JiblycoinLockEligibility_init(_redistributionPool);
+        initializeLockEligibilityModule(_redistributionPool);
     }
 }

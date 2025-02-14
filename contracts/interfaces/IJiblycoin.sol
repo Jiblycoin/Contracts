@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import "../structs/JiblycoinStructs.sol";
+// Use a named import with an alias for the structs
+import { JiblycoinStructs as JStructs } from "../structs/JiblycoinStructs.sol";
 
 /**
  * @title IJiblycoin
@@ -11,7 +12,7 @@ import "../structs/JiblycoinStructs.sol";
 interface IJiblycoin {
     /**
      * @notice Retrieves the current fee parameters.
-     * @return feeParams The fee parameters as defined in JiblycoinStructs.FeeParameters.
+     * @return feeParams The fee parameters as defined in JStructs.FeeParameters.
      */
-    function getFeeParameters() external view returns (JiblycoinStructs.FeeParameters memory feeParams);
+    function getFeeParameters() external view returns (JStructs.FeeParameters memory feeParams);
 }

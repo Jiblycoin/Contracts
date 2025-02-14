@@ -2,7 +2,6 @@
 pragma solidity ^0.8.27;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { Errors } from "../libraries/Errors.sol";
 
 /**
  * @title JiblycoinOracle

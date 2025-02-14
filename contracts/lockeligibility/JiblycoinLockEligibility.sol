@@ -1,22 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-// Use named imports only.
 import { JiblycoinCore } from "../core/JiblycoinCore.sol";
 import { JiblycoinStructs } from "../structs/JiblycoinStructs.sol";
-import { DiamondStorageLib } from "../libraries/DiamondStorageLib.sol";
 import { Errors } from "../libraries/Errors.sol";
 
 /**
  * @title JiblycoinLockEligibility
  * @notice Provides functionalities for locking tokens to gain eligibility for additional rewards.
  * @dev Extends JiblycoinCore to incorporate token locking mechanisms. This contract manages locked tokens,
- *      lock expiry, and team vesting parameters using centralized storage via DiamondStorageLib.
+ *      lock expiry, and team vesting parameters.
  *      It uses custom errors from Errors.sol to optimize gas consumption.
  */
 abstract contract JiblycoinLockEligibility is JiblycoinCore {
     // ====================================================
-    // State Variables (Stored in DiamondStorage)
+    // State Variables
     // ====================================================
     /// @notice Redistribution pool allocated for locked tokens.
     uint256 public redistributionPool;
@@ -68,7 +66,7 @@ abstract contract JiblycoinLockEligibility is JiblycoinCore {
      * @dev Sets the initial redistribution pool for locked tokens.
      * @param _redistributionPool The initial amount allocated to the redistribution pool.
      */
-    function __JiblycoinLockEligibility_init(uint256 _redistributionPool) internal onlyInitializing {
+    function initializeLockEligibilityModule(uint256 _redistributionPool) internal onlyInitializing {
         redistributionPool = _redistributionPool;
     }
 
@@ -126,9 +124,9 @@ abstract contract JiblycoinLockEligibility is JiblycoinCore {
      * @dev Reverts if the current time is before the lock expiry or if no tokens are locked.
      */
     function unlockTokens() external whenNotPaused nonReentrant {
-        if (block.timestamp < lockExpiry[msg.sender]) revert Errors.ExecTimeZero(); // Proxy error for early unlock attempt
+        if (block.timestamp < lockExpiry[msg.sender]) revert Errors.ExecTimeZero(); // Early unlock attempt
         uint256 amount = lockedTokens[msg.sender];
-        if (amount == 0) revert Errors.BurnZero(); // Proxy error for no locked tokens
+        if (amount == 0) revert Errors.BurnZero(); // No locked tokens
         lockedTokens[msg.sender] = 0;
         lockExpiry[msg.sender] = 0;
         _transfer(address(this), msg.sender, amount);
@@ -136,7 +134,7 @@ abstract contract JiblycoinLockEligibility is JiblycoinCore {
     }
 
     // ====================================================
-    // Administrative Lock Functions
+    // Administrative Functions
     // ====================================================
     /**
      * @notice Adjusts the redistribution pool.

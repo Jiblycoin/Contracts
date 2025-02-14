@@ -26,7 +26,8 @@ contract JiblycoinStakingFacet is JiblycoinStaking {
      */
     function initStakingFacet() external {
         DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
-        if (!hasRole(ds.ADMIN_ROLE, msg.sender)) revert NotAuthorized();
+        // Use the library function "hasRole" to check the admin role.
+        if (!DiamondStorageLib.hasRole(ds, ADMIN_ROLE, msg.sender)) revert NotAuthorized();
         if (ds.poolIds.length != 0) revert AlreadyInitialized();
         __jiblycoinStakingInit();
     }

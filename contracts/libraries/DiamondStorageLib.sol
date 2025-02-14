@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-// Instead of using an alias, import the structs directly.
-import "../structs/JiblycoinStructs.sol";
+import { JiblycoinStructs as JStructs } from "../structs/JiblycoinStructs.sol";
 
 /**
  * @title DiamondStorageLib
@@ -28,19 +27,19 @@ library DiamondStorageLib {
         // For staking purposes
         uint256[] poolIds;
         // Fee management
-        JiblycoinStructs.FeeParameters feeParams;
+        JStructs.FeeParameters feeParams;
         // Bridge management
-        JiblycoinStructs.BridgeParameters bridgeParams;
+        JStructs.BridgeParameters bridgeParams;
         // Governance
-        JiblycoinStructs.GovernanceParameters governanceParams;
-        JiblycoinStructs.RewardCapsStruct govPointsCaps;
-        mapping(uint64 => JiblycoinStructs.Proposal) proposals;
+        JStructs.GovernanceParameters governanceParams;
+        JStructs.RewardCapsStruct govPointsCaps;
+        mapping(uint64 => JStructs.Proposal) proposals;
         uint64 proposalCount;
-        // Roles
-        bytes32 ADMIN_ROLE;
-        bytes32 UPGRADER_ROLE;
-        bytes32 SECURITY_ROLE;
-        bytes32 BRIDGE_ROLE;
+        // Roles (renamed to lowerCamelCase)
+        bytes32 adminRole;
+        bytes32 upgraderRole;
+        bytes32 securityRole;
+        bytes32 bridgeRole;
         mapping(bytes32 => mapping(address => bool)) roles;
         // Anti‑whale
         uint256 maxWalletSize;
@@ -61,7 +60,7 @@ library DiamondStorageLib {
         uint256 redistributionPool;
         mapping(address => uint256) lockedTokens;
         mapping(address => uint256) lockExpiry;
-        mapping(address => JiblycoinStructs.VestingParameters) jiblyVesting;
+        mapping(address => JStructs.VestingParameters) jiblyVesting;
         // Upgrade
         uint64 upgradeDelay;
         mapping(address => uint256) pendingUpgrades;
@@ -77,9 +76,9 @@ library DiamondStorageLib {
         mapping(address => address) referrers;
         mapping(address => uint256) referralJiblyPoints;
         mapping(address => bool) jiblyPointsClaimed;
-        mapping(address => JiblycoinStructs.JiblyLoyaltyTier) userJiblyTiers;
+        mapping(address => JStructs.JiblyLoyaltyTier) userJiblyTiers;
         // Staking
-        mapping(uint256 => JiblycoinStructs.StakingPool) stakingPools;
+        mapping(uint256 => JStructs.StakingPool) stakingPools;
         mapping(uint256 => mapping(address => uint256)) stakedAmounts;
         mapping(uint256 => mapping(address => uint256)) rewardDebt;
         mapping(address => mapping(uint256 => uint256)) lastRewardTimestamp;
@@ -103,6 +102,7 @@ library DiamondStorageLib {
      */
     function diamondStorage() internal pure returns (DiamondStorage storage ds) {
         bytes32 position = DIAMOND_STORAGE_POSITION;
+        // solhint-disable-next-line no-inline-assembly
         assembly {
             ds.slot := position
         }

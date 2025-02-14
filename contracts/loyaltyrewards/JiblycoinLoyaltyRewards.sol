@@ -6,7 +6,6 @@ import { JiblycoinCore } from "../core/JiblycoinCore.sol";
 import { DiamondStorageLib } from "../libraries/DiamondStorageLib.sol";
 import { Errors } from "../libraries/Errors.sol";
 import { JiblycoinLoyaltyLib } from "../libraries/JiblycoinLoyaltyLib.sol";
-import { JiblycoinStructs } from "../structs/JiblycoinStructs.sol";
 
 /**
  * @title JiblycoinLoyaltyRewards
@@ -40,7 +39,7 @@ abstract contract JiblycoinLoyaltyRewards is JiblycoinCore {
      * @param _referralJiblyPointsCap The maximum cap for referral points.
      * @param _userJiblyPointsCap The maximum points a user can claim.
      */
-    function __JiblycoinLoyaltyRewards_init(
+    function initJiblycoinLoyaltyRewards(
         uint256[3] memory _referralJiblyPointsRates,
         uint256 _referralJiblyPointsCap,
         uint256 _userJiblyPointsCap

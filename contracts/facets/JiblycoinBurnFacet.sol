@@ -1,29 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-// Import DiamondStorageLib using a namespace alias.
-import { DiamondStorageLib as DS } from "../libraries/DiamondStorageLib.sol";
-// Import Errors normally (solhint now won’t complain as we’re not doing a global import).
+import { DiamondStorageLib } from "../libraries/DiamondStorageLib.sol";
 import { Errors } from "../libraries/Errors.sol";
 
-/**
- * @title JiblycoinBurnFacet
- * @notice Provides burning functionalities for Jiblycoin with rate limiting.
- * @dev Uses centralized storage via DiamondStorageLib and custom errors from Errors.sol
- *      to ensure gas-efficient and secure token burning operations.
- */
-contract JiblycoinBurnFacet {
-    using DS for DS.DiamondStorage;
+// Define a local error since Errors does not expose NotAuthorized.
+error NotAuthorized();
 
-    // Custom error for already–initialized facet
-    error AlreadyInitialized();
+bytes32 constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+
+contract JiblycoinBurnFacet {
+    using DiamondStorageLib for DiamondStorageLib.DiamondStorage;
 
     /**
      * @notice Emitted when Jiblycoin tokens are burned.
      * @param from The address from which tokens were burned.
      * @param amount The amount of tokens burned.
      */
-    event JiblyPointsBurned(address indexed from, uint256 indexed amount);
+    event JiblyPointsBurned(address indexed from, uint256 amount);
 
     /**
      * @notice Emitted when the burn facet is initialized.
@@ -39,9 +33,10 @@ contract JiblycoinBurnFacet {
      * @param _burnCooldown The cooldown period in seconds after which the burn count resets.
      */
     function initBurnFacet(uint256 _maxBurnsPerCooldown, uint256 _burnCooldown) external {
-        DS.DiamondStorage storage ds = DS.diamondStorage();
-        if (!ds.hasRole(ds.ADMIN_ROLE, msg.sender)) revert Errors.ZeroAddress(); // Alternatively, define a NotAuthorized error
-        if (ds.maxBurnsPerCooldown != 0 || ds.burnCooldown != 0) revert AlreadyInitialized();
+        DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
+        // Use the local ADMIN_ROLE constant.
+        if (!ds.hasRole(ADMIN_ROLE, msg.sender)) revert NotAuthorized();
+        if (ds.maxBurnsPerCooldown != 0 || ds.burnCooldown != 0) revert Errors.AlreadyClaimed(); // Alternatively, define a dedicated error for "AlreadyInitialized"
         ds.maxBurnsPerCooldown = _maxBurnsPerCooldown;
         ds.burnCooldown = _burnCooldown;
         emit BurnFacetInitialized(_maxBurnsPerCooldown, _burnCooldown);
@@ -57,7 +52,7 @@ contract JiblycoinBurnFacet {
      * @param amount The amount of tokens to burn.
      */
     function burnJiblyPoints(uint256 amount) external {
-        DS.DiamondStorage storage ds = DS.diamondStorage();
+        DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
         if (amount == 0) revert Errors.BurnZero();
         if (ds.balances[msg.sender] < amount) revert Errors.InsufficientBalance();
 

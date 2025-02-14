@@ -38,10 +38,10 @@ abstract contract JiblycoinStaking is JiblycoinCore {
 
     /**
      * @notice Internal initializer for staking logic.
+     * @dev Intentionally left blank.
      */
-    function __jiblycoinStakingInit() internal onlyInitializing {
-        // Optional initialization logic can be added here.
-    }
+    // solhint-disable-next-line no-empty-blocks
+    function __jiblycoinStakingInit() internal onlyInitializing { }
 
     /**
      * @notice Adds a new staking pool.
