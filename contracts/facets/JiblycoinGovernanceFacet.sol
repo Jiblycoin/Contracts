@@ -1,10 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import "../core/JiblycoinCore.sol";
-import "../libraries/DiamondStorageLib.sol";
-import "../structs/JiblycoinStructs.sol";
-import "../libraries/Errors.sol";
+import { JiblycoinCore } from "../core/JiblycoinCore.sol";
+import { DiamondStorageLib } from "../libraries/DiamondStorageLib.sol";
+import { Errors } from "../libraries/Errors.sol";
+import { JiblycoinStructs } from "../structs/JiblycoinStructs.sol";
+
+// Custom errors for governance actions
+error VoteNotStarted();
+error VoteEnded();
+error ProposalAlreadyExecuted();
+error VotingNotEnded();
+error QuorumNotMet();
 
 contract JiblycoinGovernanceFacet is JiblycoinCore {
     using DiamondStorageLib for DiamondStorageLib.DiamondStorage;
@@ -28,15 +35,23 @@ contract JiblycoinGovernanceFacet is JiblycoinCore {
 
     uint64 public proposalCount;
 
-    function __JiblycoinGovernance_init(
+    // Mixed-case initializer function
+    function __jiblycoinGovernanceInit(
         JiblycoinStructs.GovernanceParameters memory _governanceParams,
         JiblycoinStructs.RewardCapsStruct memory _govPointsCaps,
         address _adminWallet
     ) internal onlyInitializing {
         DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
-        ds.governanceParams = _governanceParams;
-        ds.govPointsCaps = _govPointsCaps;
+        ds.governanceParams.quorumPercentage = _governanceParams.quorumPercentage;
+        ds.governanceParams.minHoldingDuration = _governanceParams.minHoldingDuration;
+        ds.governanceParams.votingRewardPercentage = _governanceParams.votingRewardPercentage;
+
+        ds.govPointsCaps.userPointsCap = _govPointsCaps.userPointsCap;
+        ds.govPointsCaps.totalPointsCap = _govPointsCaps.totalPointsCap;
+        ds.govPointsCaps.monthlyPointsCap = _govPointsCaps.monthlyPointsCap;
+
         _setupRole(DEFAULT_ADMIN_ROLE, _adminWallet);
+        emit GovernanceInitialized(ds.governanceParams, ds.govPointsCaps, _adminWallet);
     }
 
     function createProposal(
@@ -66,9 +81,9 @@ contract JiblycoinGovernanceFacet is JiblycoinCore {
     function vote(uint64 proposalId) external nonReentrant whenNotPaused {
         DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
         JiblycoinStructs.Proposal storage prop = ds.proposals[proposalId];
-        require(block.timestamp >= prop.startTime, "Vote not started");
-        require(block.timestamp <= prop.endTime, "Vote ended");
-        require(!prop.executed, "Already executed");
+        if (block.timestamp < prop.startTime) revert VoteNotStarted();
+        if (block.timestamp > prop.endTime) revert VoteEnded();
+        if (prop.executed) revert ProposalAlreadyExecuted();
         if (balanceOf(msg.sender) < 1e18) revert Errors.InsufficientBalance();
         if (prop.voters[msg.sender]) revert Errors.AlreadyClaimed();
         uint256 votingPower = balanceOf(msg.sender);
@@ -80,10 +95,10 @@ contract JiblycoinGovernanceFacet is JiblycoinCore {
     function executeProposal(uint64 proposalId) external nonReentrant whenNotPaused {
         DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
         JiblycoinStructs.Proposal storage prop = ds.proposals[proposalId];
-        require(block.timestamp > prop.endTime, "Voting not ended");
-        require(!prop.executed, "Already executed");
+        if (block.timestamp <= prop.endTime) revert VotingNotEnded();
+        if (prop.executed) revert ProposalAlreadyExecuted();
         uint256 quorum = (totalSupply() * ds.governanceParams.quorumPercentage) / 10000;
-        require(prop.voteCount >= quorum, "Quorum not met");
+        if (prop.voteCount < quorum) revert QuorumNotMet();
         prop.executed = true;
         emit ProposalExecuted(proposalId);
     }

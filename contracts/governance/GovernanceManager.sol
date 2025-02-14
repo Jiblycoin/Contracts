@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import "../governance/JiblycoinGovernance.sol";
-import "../libraries/DiamondStorageLib.sol";
-import "../structs/JiblycoinStructs.sol";
-import "../libraries/Errors.sol";
+import { JiblycoinGovernance } from "../governance/JiblycoinGovernance.sol";
+import { DiamondStorageLib } from "../libraries/DiamondStorageLib.sol";
+import { Errors } from "../libraries/Errors.sol";
+import { JiblycoinStructs } from "../structs/JiblycoinStructs.sol";
 
 contract GovernanceManager is JiblycoinGovernance {
     /**
@@ -17,23 +17,20 @@ contract GovernanceManager is JiblycoinGovernance {
         DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
         JiblycoinStructs.Proposal storage prop = ds.proposals[proposalId];
 
-        // Ensure the voting period has ended.
         if (block.timestamp <= prop.endTime) revert Errors.ExecTimeZero(); // Voting period not ended.
-        // Ensure the proposal has not already been executed.
         if (prop.executed) revert Errors.AlreadyClaimed(); // Already executed.
-        
-        // Calculate the quorum requirement.
+
         uint256 quorumValue = (totalSupply() * ds.governanceParams.quorumPercentage) / 10000;
         if (prop.voteCount < quorumValue) revert Errors.InsufficientBalance(); // Quorum not met.
-        
-        // Mark the proposal as executed.
+
         prop.executed = true;
-        
-        // Execute additional logic based on proposal category.
+
         if (keccak256(bytes(prop.category)) == keccak256(bytes("Fee Adjustment"))) {
-            // Implement fee adjustment logic here.
+            // Fee adjustment logic not implemented.
+            { uint256 _noop = 0; _noop = _noop; }
         } else if (keccak256(bytes(prop.category)) == keccak256(bytes("New Feature"))) {
-            // Implement new feature logic here.
+            // New feature logic not implemented.
+            { uint256 _noop = 0; _noop = _noop; }
         }
         
         emit ProposalExecuted(proposalId);

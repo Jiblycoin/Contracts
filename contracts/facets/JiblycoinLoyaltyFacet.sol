@@ -26,6 +26,6 @@ contract JiblycoinLoyaltyFacet is JiblycoinLoyaltyRewards {
         uint256 _referralJiblyPointsCap,
         uint256 _userJiblyPointsCap
     ) external initializer {
-        __JiblycoinLoyaltyRewards_init(_referralJiblyPointsRates, _referralJiblyPointsCap, _userJiblyPointsCap);
+        super.__JiblycoinLoyaltyRewards_init(_referralJiblyPointsRates, _referralJiblyPointsCap, _userJiblyPointsCap);
     }
 }

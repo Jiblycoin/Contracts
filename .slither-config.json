@@ -1,5 +1,9 @@
 {
-  "disable_detectors": [
-    "inline-assembly"
+  "solc-remappings": [
+    "@openzeppelin/=node_modules/@openzeppelin/"
+  ],
+  "allowed-paths": [
+    ".",
+    "node_modules"
   ]
 }

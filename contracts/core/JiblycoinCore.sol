@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-// Import OpenZeppelin upgradeable contracts
+// solhint-disable max-states-count
+// solhint-disable no-empty-blocks
+
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { ERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
@@ -9,7 +11,6 @@ import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/securit
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-// Import your libraries and interfaces
 import { FeeLibrary as FeeLib } from "../libraries/FeeLibrary.sol";
 import { JiblycoinUtils } from "../utils/JiblycoinUtils.sol";
 import { JiblycoinStructs as JStructs } from "../structs/JiblycoinStructs.sol";
@@ -24,10 +25,6 @@ error InvalidSignature();
 /// @dev Declare a new error for function call failure.
 error FunctionCallFailed();
 
-/**
- * @dev Simplified Chainlink VRF interface.
- * This interface lets our contract call requestRandomness.
- */
 interface IChainlinkVRF {
     function requestRandomness(bytes32 keyHash, uint256 fee) external returns (uint256 requestId);
 }
@@ -517,7 +514,7 @@ abstract contract JiblycoinCore is
      * @param newImplementation The address of the new implementation.
      */
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {
-        // The onlyRole modifier enforces the authorization.
+        /* no additional authorization required as onlyRole(UPGRADER_ROLE) is enforced */
     }
 
     uint256[50] private __gap;

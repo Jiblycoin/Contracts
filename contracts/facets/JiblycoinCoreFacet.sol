@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-// Bind exports into namespaces.
 import * as Core from "../core/JiblycoinCore.sol";
-import * as DS from "../libraries/DiamondStorageLib.sol";
-import * as E from "../libraries/Errors.sol";
 
 contract JiblycoinCoreFacet is Core.JiblycoinCore {
     /**

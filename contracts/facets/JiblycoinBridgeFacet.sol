@@ -1,18 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import "../core/JiblycoinCore.sol";
-import "../interfaces/IAllbridgeCore.sol";
+// Bind the core and Allbridge interface into namespaces
+import * as Core from "../core/JiblycoinCore.sol";
+import * as IAllbridge from "../interfaces/IAllbridgeCore.sol";
+import { Errors } from "../libraries/Errors.sol";
 
 /**
  * @title JiblycoinBridgeFacet
  * @notice Facilitates cross-chain token transfers using the Allbridge Core protocol.
  * @dev Extends JiblycoinCore to leverage centralized storage and governance controls.
- *      Includes detailed NatSpec documentation, error checks, and event emissions.
+ *      Includes detailed NatSpec documentation, custom error checks, and event emissions.
  */
-contract JiblycoinBridgeFacet is JiblycoinCore {
+contract JiblycoinBridgeFacet is Core.JiblycoinCore {
     /// @notice Allbridge Core contract instance used for cross-chain transfers.
-    IAllbridgeCore public allbridgeCore;
+    IAllbridge.IAllbridgeCore public allbridgeCore;
 
     /**
      * @notice Emitted when the Allbridge Core contract address is updated.
@@ -40,8 +42,8 @@ contract JiblycoinBridgeFacet is JiblycoinCore {
      * @param _bridgeAddress The address of the Allbridge Core contract.
      */
     function setAllbridgeCoreAddress(address _bridgeAddress) external onlyRole(ADMIN_ROLE) {
-        require(_bridgeAddress != address(0), "Invalid address");
-        allbridgeCore = IAllbridgeCore(_bridgeAddress);
+        if (_bridgeAddress == address(0)) revert Errors.ZeroAddress();
+        allbridgeCore = IAllbridge.IAllbridgeCore(_bridgeAddress);
         emit AllbridgeCoreAddressSet(_bridgeAddress);
     }
 
@@ -61,8 +63,8 @@ contract JiblycoinBridgeFacet is JiblycoinCore {
         address recipient,
         bytes calldata extraData
     ) external payable onlyRole(ADMIN_ROLE) returns (bytes32 transferId) {
-        require(amount > 0, "Amount must be > 0");
-        require(recipient != address(0), "Invalid recipient");
+        if (amount == 0) revert Errors.InsufficientBalance(); // Using InsufficientBalance as proxy for zero amount
+        if (recipient == address(0)) revert Errors.ZeroAddress();
         transferId = allbridgeCore.sendToChain{value: msg.value}(amount, destinationChainId, recipient, extraData);
         emit CrossChainTransferInitiated(transferId, amount, destinationChainId, recipient);
     }

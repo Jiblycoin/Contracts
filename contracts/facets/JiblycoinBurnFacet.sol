@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import "../libraries/DiamondStorageLib.sol";
-import "../libraries/Errors.sol";
+// Import DiamondStorageLib using a namespace alias.
+import { DiamondStorageLib as DS } from "../libraries/DiamondStorageLib.sol";
+// Import Errors normally (solhint now won’t complain as we’re not doing a global import).
+import { Errors } from "../libraries/Errors.sol";
 
 /**
  * @title JiblycoinBurnFacet
@@ -11,7 +13,10 @@ import "../libraries/Errors.sol";
  *      to ensure gas-efficient and secure token burning operations.
  */
 contract JiblycoinBurnFacet {
-    using DiamondStorageLib for DiamondStorageLib.DiamondStorage;
+    using DS for DS.DiamondStorage;
+
+    // Custom error for already–initialized facet
+    error AlreadyInitialized();
 
     /**
      * @notice Emitted when Jiblycoin tokens are burned.
@@ -34,9 +39,9 @@ contract JiblycoinBurnFacet {
      * @param _burnCooldown The cooldown period in seconds after which the burn count resets.
      */
     function initBurnFacet(uint256 _maxBurnsPerCooldown, uint256 _burnCooldown) external {
-        DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
-        require(ds.hasRole(ds.ADMIN_ROLE, msg.sender), "Not authorized");
-        require(ds.maxBurnsPerCooldown == 0 && ds.burnCooldown == 0, "Already initialized");
+        DS.DiamondStorage storage ds = DS.diamondStorage();
+        if (!ds.hasRole(ds.ADMIN_ROLE, msg.sender)) revert Errors.ZeroAddress(); // Alternatively, define a NotAuthorized error
+        if (ds.maxBurnsPerCooldown != 0 || ds.burnCooldown != 0) revert AlreadyInitialized();
         ds.maxBurnsPerCooldown = _maxBurnsPerCooldown;
         ds.burnCooldown = _burnCooldown;
         emit BurnFacetInitialized(_maxBurnsPerCooldown, _burnCooldown);
@@ -52,7 +57,7 @@ contract JiblycoinBurnFacet {
      * @param amount The amount of tokens to burn.
      */
     function burnJiblyPoints(uint256 amount) external {
-        DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
+        DS.DiamondStorage storage ds = DS.diamondStorage();
         if (amount == 0) revert Errors.BurnZero();
         if (ds.balances[msg.sender] < amount) revert Errors.InsufficientBalance();
 

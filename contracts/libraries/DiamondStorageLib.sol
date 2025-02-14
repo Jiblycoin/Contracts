@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
+// Instead of using an alias, import the structs directly.
 import "../structs/JiblycoinStructs.sol";
 
 /**

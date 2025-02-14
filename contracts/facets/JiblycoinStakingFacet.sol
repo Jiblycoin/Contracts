@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import "../staking/JiblycoinStaking.sol";
-import "../libraries/DiamondStorageLib.sol";
-import "../interfaces/IJiblycoinNFT.sol";
+import { JiblycoinStaking } from "../staking/JiblycoinStaking.sol";
+import { DiamondStorageLib } from "../libraries/DiamondStorageLib.sol";
+
+error NotAuthorized();
+error AlreadyInitialized();
+error ZeroAddress();
 
 /**
  * @title JiblycoinStakingFacet
@@ -13,7 +16,7 @@ import "../interfaces/IJiblycoinNFT.sol";
  *      Uses centralized storage via DiamondStorageLib and inherits non‑reentrant and pausable protections.
  */
 contract JiblycoinStakingFacet is JiblycoinStaking {
-    /// @notice Local storage for NFT contract address used in exclusive staking pools.
+    // Local storage for NFT contract address used in exclusive staking pools.
     address private nftContractAddress;
 
     /**
@@ -23,9 +26,9 @@ contract JiblycoinStakingFacet is JiblycoinStaking {
      */
     function initStakingFacet() external {
         DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
-        require(hasRole(ds.ADMIN_ROLE, msg.sender), "Not authorized");
-        require(ds.poolIds.length == 0, "Already initialized");
-        __jiblycoinStakingInit(); // Corrected function call (lowercase 'j')
+        if (!hasRole(ds.ADMIN_ROLE, msg.sender)) revert NotAuthorized();
+        if (ds.poolIds.length != 0) revert AlreadyInitialized();
+        __jiblycoinStakingInit();
     }
 
     /**
@@ -35,7 +38,7 @@ contract JiblycoinStakingFacet is JiblycoinStaking {
      * @param _nftAddress The address of the NFT contract.
      */
     function setNFTContractAddress(address _nftAddress) external override onlyRole(UPGRADER_ROLE) {
-        require(_nftAddress != address(0), "Zero address");
+        if (_nftAddress == address(0)) revert ZeroAddress();
         nftContractAddress = _nftAddress;
     }
 

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import { DiamondStorageLib } from "../libraries/DiamondStorageLib.sol";
-import { Address } from "@openzeppelin/contracts/utils/Address.sol"; // Import the Address library
+// Import DiamondStorageLib with a namespace alias to avoid naming conflicts.
+import { DiamondStorageLib as DS } from "../libraries/DiamondStorageLib.sol";
+import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 
-// Custom errors can be defined in your Errors.sol file;
-// For this example, we'll assume they are defined as follows:
+// Custom errors
 error InitializationFailed();
 error FunctionDoesNotExist();
 error NotAuthorized();
@@ -20,12 +20,10 @@ contract JiblycoinDiamond {
      * @param _initCalldata Optional calldata for initializing facets; if provided, it is delegatecalled.
      */
     constructor(address _admin, bytes memory _initCalldata) {
-        DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
+        DS.DiamondStorage storage ds = DS.diamondStorage();
         ds.adminWallet = _admin;
         if (_initCalldata.length > 0) {
-            // Use OpenZeppelin's functionDelegateCall instead of a low-level delegatecall.
-            // This avoids low-level calls and performs error checking internally.
-            // If the call fails, the helper will revert.
+            // Use OpenZeppelin's functionDelegateCall for safe delegatecall.
             Address.functionDelegateCall(address(this), _initCalldata);
         }
     }
@@ -49,14 +47,13 @@ contract JiblycoinDiamond {
      * @param cuts An array of DSFacetCut structs specifying facet addresses and their selectors.
      */
     function setFacets(DSFacetCut[] calldata cuts) external {
-        DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
+        DS.DiamondStorage storage ds = DS.diamondStorage();
         if (msg.sender != ds.adminWallet) revert NotAuthorized();
         for (uint256 i = 0; i < cuts.length; i++) {
             DSFacetCut calldata cut = cuts[i];
             for (uint256 j = 0; j < cut.selectors.length; j++) {
                 ds.facets[cut.selectors[j]] = cut.facetAddress;
-                // Optionally, you could check if the selector already exists in ds.functionSelectors
-                // and add it if not present.
+                // Optionally: add the selector to ds.functionSelectors if not already present.
             }
         }
     }
@@ -66,14 +63,21 @@ contract JiblycoinDiamond {
     // ------------------------------------------------------------------------
     /**
      * @notice Fallback function that delegates calls to the appropriate facet.
-     * @dev Uses OpenZeppelin's Address.functionDelegateCall for delegation.
-     *      Inline assembly is used only to return the result.
      */
     fallback() external payable {
-        DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
+        _fallback();
+    }
+
+    /**
+     * @dev Internal function to perform the delegatecall and return the result.
+     */
+    function _fallback() private {
+        DS.DiamondStorage storage ds = DS.diamondStorage();
         address facet = ds.facets[msg.sig];
         if (facet == address(0)) revert FunctionDoesNotExist();
+        // Perform the delegatecall using Address.functionDelegateCall.
         bytes memory result = Address.functionDelegateCall(facet, msg.data);
+        // Inline assembly is necessary here per the diamond standard.
         // solhint-disable-next-line no-inline-assembly
         assembly {
             return(add(result, 32), mload(result))

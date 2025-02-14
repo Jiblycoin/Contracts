@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import "../lockeligibility/JiblycoinLockEligibility.sol";
+import * as LockEligibility from "../lockeligibility/JiblycoinLockEligibility.sol";
 
 /**
  * @title JiblycoinLockEligibilityFacet
@@ -10,7 +10,7 @@ import "../lockeligibility/JiblycoinLockEligibility.sol";
  *      and initialize team vesting. This facet is intended for use with the diamond pattern,
  *      utilizing centralized storage.
  */
-contract JiblycoinLockEligibilityFacet is JiblycoinLockEligibility {
+contract JiblycoinLockEligibilityFacet is LockEligibility.JiblycoinLockEligibility {
     /**
      * @notice Initializes the lock eligibility facet.
      * @dev Sets the initial redistribution pool for locked tokens.
