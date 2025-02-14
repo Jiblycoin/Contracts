@@ -32,6 +32,7 @@ An upgradeable, diamond-pattern ERC20 token on Binance Smart Chain (BSC) with st
 - [NFTIntegration.md](./docs/NFTIntegration.md)  
 - [UpgradeGuide.md](./docs/UpgradeGuide.md)  
 - [CrossChainBridge.md](./docs/CrossChainBridge.md)  
+- [Audit-Solhint.md](./Audits/Audit-Solhint.md)
 
 ## Security
 - Built-in pausable & circuit breaker logic
