@@ -1,12 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-/**
- * @title JiblycoinStructs
- * @notice Contains all data structures used in the Jiblycoin ecosystem.
- * @dev This library defines core structs and enums for fee parameters, governance, vesting,
- *      loyalty tiers, user statistics, bridging, staking, and proposals.
- */
 library JiblycoinStructs {
     /**
      * @notice Fee parameters used for calculating transaction fees.
@@ -15,6 +9,7 @@ library JiblycoinStructs {
      * @param burnFeePercentage Fee percentage allocated for burning tokens (in basis points).
      * @param buybackFeePercentage Fee percentage allocated for buyback (in basis points).
      * @param jiblyHoodFeePercentage Fee percentage allocated to the JiblyHood rewards pool (in basis points).
+     * @param rewardPoolFeePercentage Fee percentage allocated to the reward pool (in basis points).
      */
     struct FeeParameters {
         uint16 baseFeePercentage;
@@ -22,6 +17,7 @@ library JiblycoinStructs {
         uint16 burnFeePercentage;
         uint16 buybackFeePercentage;
         uint16 jiblyHoodFeePercentage;
+        uint16 rewardPoolFeePercentage; // NEW: Portion of fees sent to the reward pool
     }
 
     /**

@@ -2,40 +2,54 @@ require("dotenv").config();
 require("@nomicfoundation/hardhat-toolbox");
 require("@openzeppelin/hardhat-upgrades");
 
+// If you want to fork from BSC Mainnet, use its RPC URL and set a block number below 10,000.
+// Otherwise, forkingConfig will be undefined.
+const forkingConfig = process.env.BSC_MAINNET_RPC
+  ? {
+      url: process.env.BSC_MAINNET_RPC,
+      blockNumber: process.env.FORK_BLOCK_NUMBER
+        ? parseInt(process.env.FORK_BLOCK_NUMBER)
+        : 5000, // default block number for forking (adjust as needed)
+    }
+  : undefined;
+
 module.exports = {
   solidity: {
-    version: "0.8.27", // Matches your Solidity version
+    version: "0.8.27",
     settings: {
       optimizer: {
         enabled: true,
-        runs: 300, // Lower runs value may reduce deployed size further. Experiment with values (e.g., 100 or 150) instead of 300.
+        runs: 300, // adjust as needed
       },
-      viaIR: true, // Enable the IR pipeline to optimize stack usage and contract size
+      viaIR: true, // enable the IR pipeline to optimize stack usage and contract size
       metadata: {
-        // Remove extra metadata to help reduce size if needed.
-        useLiteralContent: false,
+        useLiteralContent: false, // remove extra metadata to reduce size if needed
       },
     },
   },
   networks: {
     hardhat: {
-      forking: {
-        url: process.env.MAINNET_RPC || "", // Optional: Fork mainnet for testing
-        blockNumber: process.env.FORK_BLOCK_NUMBER ? parseInt(process.env.FORK_BLOCK_NUMBER) : undefined,
-      },
+      // This will fork from BSC if forkingConfig is defined
+      forking: forkingConfig,
     },
     bscTestnet: {
-      url: process.env.BSC_TESTNET_RPC || "https://data-seed-prebsc-1-s1.binance.org:8545/",
+      url:
+        process.env.BSC_TESTNET_RPC ||
+        "https://data-seed-prebsc-1-s1.binance.org:8545/",
       chainId: 97,
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
     bscMainnet: {
-      url: process.env.BSC_MAINNET_RPC || "https://bsc-dataseed.binance.org/",
+      url:
+        process.env.BSC_MAINNET_RPC ||
+        "https://bsc-dataseed.binance.org/",
       chainId: 56,
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
     ethereumMainnet: {
-      url: process.env.ETHEREUM_RPC || "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID",
+      url:
+        process.env.ETHEREUM_RPC ||
+        "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID",
       chainId: 1,
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
@@ -58,9 +72,9 @@ module.exports = {
     timeout: 200000,
   },
   paths: {
-    sources: "./contracts",     // Default source folder
-    tests: "./tests",           // Default test folder
-    cache: "./cache",           // Default cache folder
-    artifacts: "./artifacts",   // Default artifacts folder
+    sources: "./contracts", // Default source folder
+    tests: "./tests", // Default test folder
+    cache: "./cache", // Default cache folder
+    artifacts: "./artifacts", // Default artifacts folder
   },
 };

@@ -3,30 +3,23 @@ require("@nomicfoundation/hardhat-toolbox");
 require("@openzeppelin/hardhat-upgrades");
 
 async function main() {
-  // Get the deployer account
   const [deployer] = await ethers.getSigners();
   console.log("Deploying contracts with the account:", deployer.address);
 
-  // Deploy the NFT contract first (if needed by other facets)
+  // Deploy the NFT contract (used later by the StakingFacet)
   const JiblycoinNFT = await ethers.getContractFactory("JiblycoinNFT");
-  const jiblyNFT = await JiblycoinNFT.deploy(
-    "Jiblycoin NFT",          // Name
-    "JBNFT",                 // Symbol
-    "https://base-uri.com/", // Base URI
-    deployer.address         // Admin
-  );
+  const jiblyNFT = await JiblycoinNFT.deploy("Jiblycoin NFT", "JBNFT", "https://base-uri.com/", deployer.address);
   await jiblyNFT.deployed();
   console.log("JiblycoinNFT deployed to:", jiblyNFT.address);
 
-  // Now deploy your final Diamond contract (the wrapper) named "Jiblycoin"
-  // Its constructor expects (address _admin, bytes memory _initCalldata)
-  // We pass the deployer's address and "0x" (an empty bytes string)
-  const Jiblycoin = await ethers.getContractFactory("Jiblycoin");
-  const diamond = await Jiblycoin.deploy(deployer.address, "0x");
+  // Deploy the Diamond contract.
+  // Note: Your Diamond constructor expects an admin address and an initialization calldata (here we pass empty bytes).
+  const Diamond = await ethers.getContractFactory("JiblycoinDiamond");
+  const diamond = await Diamond.deploy(deployer.address, "0x");
   await diamond.deployed();
-  console.log("Jiblycoin (Diamond) deployed to:", diamond.address);
+  console.log("Diamond deployed to:", diamond.address);
 
-  // Define the facet names to be deployed and wired.
+  // List the names of your facet contracts
   const facetNames = [
     "JiblycoinCoreFacet",
     "JiblycoinGovernanceFacet",
@@ -40,7 +33,7 @@ async function main() {
 
   const deployedFacets = {};
 
-  // Deploy each facet
+  // Deploy each facet contract
   for (const name of facetNames) {
     const FacetFactory = await ethers.getContractFactory(name);
     const facet = await FacetFactory.deploy();
@@ -49,39 +42,38 @@ async function main() {
     deployedFacets[name] = facet;
   }
 
-  // Helper function to get selectors from a facet (skipping any functions that include "init")
+  // Helper function to extract function selectors from a contract’s ABI.
   function getSelectors(contractInstance) {
     const selectors = [];
-    const functionFragments = contractInstance.interface.fragments.filter(
-      (f) => f.type === "function"
-    );
-    for (const frag of functionFragments) {
-      if (frag.name.includes("init")) continue;
-      const selector = contractInstance.interface.getSighash(frag);
+    const iface = contractInstance.interface;
+    for (const fragment of iface.fragments) {
+      if (fragment.type !== "function") continue;
+      // Skip initializer functions (if desired)
+      if (fragment.name.startsWith("init")) continue;
+      const selector = iface.getSighash(fragment);
       selectors.push(selector);
     }
     return selectors;
   }
 
-  // Build an array of facet cuts for wiring the diamond.
-  const DSFacetCut = [];
+  // Build an array of facet cuts (each containing a facet’s address and its function selectors)
+  const facetCuts = [];
   for (const name of facetNames) {
     const facet = deployedFacets[name];
     const selectors = getSelectors(facet);
-    DSFacetCut.push({
+    console.log(`Facet ${name} selectors:`, selectors);
+    facetCuts.push({
       facetAddress: facet.address,
       selectors: selectors
     });
-    console.log(`Facet ${name} selectors:`, selectors);
   }
 
-  // Wire the facets into your diamond.
-  // This assumes your Diamond (or Jiblycoin) contract has a function called "setFacets"
-  const tx = await diamond.setFacets(DSFacetCut);
-  await tx.wait();
-  console.log("Facets wired to diamond.");
+  // Wire the facets into the Diamond by calling setFacets with the array of facet cuts.
+  const setFacetsTx = await diamond.setFacets(facetCuts);
+  await setFacetsTx.wait();
+  console.log("Facet wiring complete.");
 
-  // For the staking facet, set the NFT contract address (if applicable)
+  // For the StakingFacet, set the NFT contract address so that it can check NFT ownership.
   if (deployedFacets["JiblycoinStakingFacet"]) {
     const stakingFacet = deployedFacets["JiblycoinStakingFacet"];
     const txNFT = await stakingFacet.setNFTContractAddress(jiblyNFT.address);

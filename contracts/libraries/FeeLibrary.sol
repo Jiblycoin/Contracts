@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-// Import structs with a namespace alias to avoid global imports.
 import { JiblycoinStructs as JStructs } from "../structs/JiblycoinStructs.sol";
 
 /**
@@ -30,5 +29,6 @@ library FeeLibrary {
         totalFee += (amount * feeParams.burnFeePercentage) / 10000;
         totalFee += (amount * feeParams.buybackFeePercentage) / 10000;
         totalFee += (amount * feeParams.jiblyHoodFeePercentage) / 10000;
+        totalFee += (amount * feeParams.rewardPoolFeePercentage) / 10000; // NEW: Include reward pool fee
     }
 }

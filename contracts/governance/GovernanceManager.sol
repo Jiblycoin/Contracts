@@ -3,8 +3,15 @@ pragma solidity ^0.8.27;
 
 import { JiblycoinGovernance } from "../governance/JiblycoinGovernance.sol";
 import { DiamondStorageLib } from "../libraries/DiamondStorageLib.sol";
-import { Errors } from "../libraries/Errors.sol";
-import { JiblycoinStructs } from "../structs/JiblycoinStructs.sol";
+import { JiblycoinStructs as JStructs } from "../structs/JiblycoinStructs.sol";
+
+// Custom errors for governance operations
+error VoteNotStarted();
+error VoteEnded();
+error ProposalAlreadyExecuted();
+error VoteNotEnded();
+error QuorumNotMet();
+error InvalidProposalId();
 
 contract GovernanceManager is JiblycoinGovernance {
     /**
@@ -15,22 +22,23 @@ contract GovernanceManager is JiblycoinGovernance {
      */
     function executeCategorizedProposal(uint64 proposalId) external nonReentrant whenNotPaused {
         DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
-        JiblycoinStructs.Proposal storage prop = ds.proposals[proposalId];
+        if (proposalId == 0 || proposalId > proposalCount) revert InvalidProposalId();
+        JStructs.Proposal storage prop = ds.proposals[proposalId];
 
-        if (block.timestamp <= prop.endTime) revert Errors.ExecTimeZero(); // Voting period not ended.
-        if (prop.executed) revert Errors.AlreadyClaimed(); // Already executed.
-
+        if (block.timestamp <= prop.endTime) revert VoteNotEnded();
+        if (prop.executed) revert ProposalAlreadyExecuted();
+        
         uint256 quorumValue = (totalSupply() * ds.governanceParams.quorumPercentage) / 10000;
-        if (prop.voteCount < quorumValue) revert Errors.InsufficientBalance(); // Quorum not met.
+        if (prop.voteCount < quorumValue) revert QuorumNotMet();
 
+        // Mark the proposal as executed
         prop.executed = true;
 
+        // Categorized execution logic (placeholders for future implementation)
         if (keccak256(bytes(prop.category)) == keccak256(bytes("Fee Adjustment"))) {
-            // Fee adjustment logic not implemented.
-            { uint256 _noop = 0; _noop = _noop; }
+            // Fee adjustment logic goes here.
         } else if (keccak256(bytes(prop.category)) == keccak256(bytes("New Feature"))) {
-            // New feature logic not implemented.
-            { uint256 _noop = 0; _noop = _noop; }
+            // New feature logic goes here.
         }
         
         emit ProposalExecuted(proposalId);

@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-// solhint-disable max-states-count
-// solhint-disable no-empty-blocks
-
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { ERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
@@ -19,10 +16,7 @@ import { Errors } from "../libraries/Errors.sol";
 import { DiamondStorageLib } from "../libraries/DiamondStorageLib.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
 
-/// @dev Declare a new error for an invalid signature.
 error InvalidSignature();
-
-/// @dev Declare a new error for function call failure.
 error FunctionCallFailed();
 
 interface IChainlinkVRF {
@@ -34,16 +28,7 @@ interface IChainlinkVRF {
  * @notice Core ERC20 implementation for Jiblycoin with upgradeability, meta‑transactions,
  * dynamic fee adjustments, secure randomness via Chainlink VRF, timelock governance,
  * analytics, and bonus mechanisms for long‑term holders.
- * @dev Designed as the shared “heart” of a diamond pattern architecture.
- *      This contract integrates:
- *       - Detailed NatSpec documentation
- *       - Custom error usage for gas savings
- *       - Non‑reentrant protection via ReentrancyGuardUpgradeable
- *       - Pausable functionality
- *       - Role‑based access control using DiamondStorageLib
- *       - Centralized storage via the diamond pattern
- *       - Emission of detailed events on state changes
- *       - Integrated bonus, fee distribution, and upgrade mechanisms
+ * @dev This contract is designed as the heart of a diamond pattern architecture.
  */
 abstract contract JiblycoinCore is
     Initializable,
@@ -59,13 +44,9 @@ abstract contract JiblycoinCore is
     // ====================================================
     // Role Constants
     // ====================================================
-    /// @notice Admin role constant.
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    /// @notice Upgrader role constant.
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
-    /// @notice Security role constant.
     bytes32 public constant SECURITY_ROLE = keccak256("SECURITY_ROLE");
-    /// @notice Bridge role constant.
     bytes32 public constant BRIDGE_ROLE = keccak256("BRIDGE_ROLE");
 
     // ====================================================
@@ -86,8 +67,8 @@ abstract contract JiblycoinCore is
     // Constants
     // ====================================================
     uint256 public constant INITIAL_SUPPLY = 10_000_000 * 10**18;
-    uint256 public constant BASE_MULTIPLIER = 1e18;   // 1x
-    uint256 public constant MAX_MULTIPLIER = 2e18;      // 2x
+    uint256 public constant BASE_MULTIPLIER = 1e18;   // 1x multiplier
+    uint256 public constant MAX_MULTIPLIER = 2e18;      // 2x multiplier
     uint256 public constant MULTIPLIER_PERIOD = 30 days;
 
     // ====================================================
@@ -133,7 +114,7 @@ abstract contract JiblycoinCore is
     // ====================================================
     IJiblycoinOracle public jiblycoinOracle;
     JStructs.BridgeParameters public bridgeParams;
-    JStructs.FeeParameters public feeParams;
+    JStructs.FeeParameters public feeParams; // Fee parameters include all fee percentages.
 
     // ====================================================
     // EIP‑712 Domain Separator for Meta‑Transactions
@@ -164,23 +145,6 @@ abstract contract JiblycoinCore is
     // ====================================================
     // INITIALIZER FUNCTION
     // ====================================================
-    /**
-     * @notice Initializes the core contract.
-     * @param name_ Token name.
-     * @param symbol_ Token symbol.
-     * @param _feeParams Initial fee parameters.
-     * @param _adminWallet Admin wallet address.
-     * @param _mainWallet Main wallet address.
-     * @param _devWallet Development wallet address.
-     * @param _rewardsAirdrop Rewards/Airdrop wallet address.
-     * @param _collaborationMarketing Collaboration Marketing wallet address.
-     * @param _burnAddress Burn address.
-     * @param _buybackWallet Buyback wallet address.
-     * @param _bridgeParams Bridge parameters.
-     * @param _vrfCoordinator Address of the Chainlink VRF coordinator.
-     * @param _vrfKeyHash Key hash for Chainlink VRF.
-     * @param _vrfFee Fee for Chainlink VRF.
-     */
     function initializeJiblycoinCore(
         string memory name_,
         string memory symbol_,
@@ -209,6 +173,15 @@ abstract contract JiblycoinCore is
         _setupRole(UPGRADER_ROLE, _adminWallet);
         _setupRole(SECURITY_ROLE, _adminWallet);
         _setupRole(BRIDGE_ROLE, _bridgeParams.bridgeContract);
+
+        // Validate critical addresses.
+        if (_mainWallet == address(0)) revert Errors.ZeroAddress();
+        if (_adminWallet == address(0)) revert Errors.ZeroAddress();
+        if (_devWallet == address(0)) revert Errors.ZeroAddress();
+        if (_rewardsAirdrop == address(0)) revert Errors.ZeroAddress();
+        if (_collaborationMarketing == address(0)) revert Errors.ZeroAddress();
+        if (_burnAddress == address(0)) revert Errors.ZeroAddress();
+        if (_buybackWallet == address(0)) revert Errors.ZeroAddress();
 
         // Set addresses.
         mainWallet = _mainWallet;
@@ -264,9 +237,6 @@ abstract contract JiblycoinCore is
     // ====================================================
     // Internal Utility Functions
     // ====================================================
-    /**
-     * @notice Allocates the initial supply to designated wallets.
-     */
     function _allocateInitialSupply() internal {
         unchecked {
             uint256 devAllocation = (INITIAL_SUPPLY * 15) / 100;
@@ -288,15 +258,6 @@ abstract contract JiblycoinCore is
     // ====================================================
     // EIP‑712 Meta‑Transaction Execution
     // ====================================================
-    /**
-     * @notice Executes a meta‑transaction on behalf of a user.
-     * @param user The address of the user.
-     * @param functionSignature The function signature to execute.
-     * @param sigV The V component of the signature.
-     * @param sigR The R component of the signature.
-     * @param sigS The S component of the signature.
-     * @return returnData The data returned from the function call.
-     */
     function executeMetaTransaction(
         address user,
         bytes memory functionSignature,
@@ -324,11 +285,6 @@ abstract contract JiblycoinCore is
     // ====================================================
     // Upgrade with Timelock
     // ====================================================
-    /**
-     * @notice Upgrades the contract to a new implementation after the timelock delay has passed.
-     * @dev Only callable by an account with the UPGRADER_ROLE.
-     * @param newImplementation The address of the new implementation contract.
-     */
     function upgradeNow(address newImplementation) external onlyRole(UPGRADER_ROLE) nonReentrant {
         if (block.timestamp < upgradeTimelock) revert Errors.ExecTimeZero();
         _authorizeUpgrade(newImplementation);
@@ -339,11 +295,6 @@ abstract contract JiblycoinCore is
     // ====================================================
     // Dynamic Fee Parameters Update
     // ====================================================
-    /**
-     * @notice Updates the fee parameters.
-     * @dev Only callable by an account with the ADMIN_ROLE.
-     * @param newFeeParams The new fee parameters.
-     */
     function updateFeeParameters(JStructs.FeeParameters memory newFeeParams) external onlyRole(ADMIN_ROLE) {
         feeParams = newFeeParams;
         emit FeeParametersUpdated(newFeeParams);
@@ -352,14 +303,6 @@ abstract contract JiblycoinCore is
     // ====================================================
     // Analytics Function
     // ====================================================
-    /**
-     * @notice Returns analytics data including fees, burned tokens, buyback tokens, and incentive pools.
-     * @return _totalFeesCollected Total fees collected.
-     * @return _totalBurned Total tokens burned.
-     * @return _totalBuyback Total tokens allocated for buyback.
-     * @return _gasIncentivePool Current gas incentive pool.
-     * @return _longTermBonusPool Current long-term bonus pool.
-     */
     function getAnalyticsData() external view returns (
         uint256 _totalFeesCollected,
         uint256 _totalBurned,
@@ -373,10 +316,6 @@ abstract contract JiblycoinCore is
     // ====================================================
     // Chainlink VRF Randomness Request
     // ====================================================
-    /**
-     * @notice Requests a random reward using Chainlink VRF.
-     * @return requestId The identifier for the randomness request.
-     */
     function requestRandomReward() external returns (uint256 requestId) {
         requestId = vrfCoordinator.requestRandomness(vrfKeyHash, vrfFee);
         emit RandomRewardRequested(requestId);
@@ -385,10 +324,6 @@ abstract contract JiblycoinCore is
     // ====================================================
     // Incentive Mechanisms
     // ====================================================
-    /**
-     * @notice Claims the gas incentive bonus based on holding duration.
-     * @dev Calculates bonus as 0.01% per day of holding.
-     */
     function claimGasIncentive() external nonReentrant {
         uint256 heldTime = block.timestamp - lastTransferTime[msg.sender];
         uint256 bonus = (heldTime / 1 days) * 1e16;
@@ -399,9 +334,6 @@ abstract contract JiblycoinCore is
         emit GasIncentiveClaimed(msg.sender, bonus);
     }
 
-    /**
-     * @notice Claims the long-term bonus if tokens have been held for at least 90 days.
-     */
     function claimLongTermBonus() external nonReentrant {
         uint256 heldTime = block.timestamp - lastTransferTime[msg.sender];
         if (heldTime < 90 days) revert Errors.ExecTimeZero();
@@ -417,13 +349,6 @@ abstract contract JiblycoinCore is
     // ====================================================
     // Overridden Transfer & Fee Distribution
     // ====================================================
-    /**
-     * @notice Hook invoked before token transfers.
-     * @dev Reverts if the circuit breaker is active or if any involved address is blacklisted.
-     * @param from Sender address.
-     * @param to Recipient address.
-     * @param amount Amount to transfer.
-     */
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal override {
         if (circuitBreakerActive) revert Errors.CircuitActive();
         if (blacklistedAddresses[from] || blacklistedAddresses[to]) revert Errors.Blacklisted();
@@ -433,6 +358,8 @@ abstract contract JiblycoinCore is
     /**
      * @notice Transfers tokens with fee deduction and distribution.
      * @dev Enforces anti‑whale limits and applies fee distribution.
+     * Additionally, if the sender’s post‑transfer balance falls below the minimum holding threshold
+     * (0.01% of INITIAL_SUPPLY), their loyalty claim flag is reset.
      * @param sender Sender address.
      * @param recipient Recipient address.
      * @param amount Total amount to transfer.
@@ -444,17 +371,35 @@ abstract contract JiblycoinCore is
         uint256 totalFee = feeParams.calculateTotalFee(amount, marketConditionFactor);
         uint256 afterFee = amount - totalFee;
 
+        // Update transfer timestamps.
         lastTransferTime[sender] = block.timestamp;
         lastTransferTime[recipient] = block.timestamp;
-        totalFeesCollected += totalFee;
+        
+        // --- RESET ON SALE LOGIC ---
+        // If the sender is not the contract, check if their new balance falls below 0.01% of INITIAL_SUPPLY.
+        if (sender != address(this)) {
+            uint256 senderNewBalance = balanceOf(sender) - amount;
+            if (senderNewBalance < (INITIAL_SUPPLY / 10000)) {
+                DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
+                ds.jiblyPointsClaimed[sender] = false;
+            }
+        }
+        // ----------------------------------------
 
+        totalFeesCollected += totalFee;
         _distributeFees(sender, totalFee);
         super._transfer(sender, recipient, afterFee);
     }
 
     /**
-     * @notice Distributes fees to designated wallets and pools.
-     * @param sender The sender address from which fees are deducted.
+     * @notice Distributes fees according to the following breakdown:
+     * - Base Fee: sent to the main wallet.
+     * - Redistribution Fee: sent to the contract.
+     * - Reward Pool Fee: sent to the contract to replenish rewards.
+     * - Burn Fee: sent to the burn address.
+     * - Buyback Fee: sent to the buyback wallet.
+     * - JiblyHood Fee: added to the JiblyHood pool.
+     * @param sender The sender address.
      * @param totalFee The total fee amount.
      */
     function _distributeFees(address sender, uint256 totalFee) internal {
@@ -463,12 +408,16 @@ abstract contract JiblycoinCore is
         uint256 burnF = (totalFee * feeParams.burnFeePercentage) / 10000;
         uint256 buybackF = (totalFee * feeParams.buybackFeePercentage) / 10000;
         uint256 jiblyHoodF = (totalFee * feeParams.jiblyHoodFeePercentage) / 10000;
-
+        uint256 rewardPoolF = (totalFee * feeParams.rewardPoolFeePercentage) / 10000;
+        
         if (baseF > 0) {
             super._transfer(sender, mainWallet, baseF);
         }
         if (redisF > 0) {
             super._transfer(sender, address(this), redisF);
+        }
+        if (rewardPoolF > 0) {
+            super._transfer(sender, address(this), rewardPoolF);
         }
         if (burnF > 0) {
             super._transfer(sender, burnAddress, burnF);
@@ -487,11 +436,6 @@ abstract contract JiblycoinCore is
     // ====================================================
     // Utility: Holding Multiplier Calculation
     // ====================================================
-    /**
-     * @notice Calculates the holding multiplier based on the duration tokens have been held.
-     * @param holder The token holder address.
-     * @return multiplier The computed multiplier (capped at MAX_MULTIPLIER).
-     */
     function getHoldingMultiplier(address holder) public view returns (uint256 multiplier) {
         uint256 heldTime = block.timestamp - lastTransferTime[holder];
         uint256 periods = heldTime / MULTIPLIER_PERIOD;
@@ -508,13 +452,8 @@ abstract contract JiblycoinCore is
     // ====================================================
     // Upgrade Authorization
     // ====================================================
-    /**
-     * @notice Authorizes contract upgrades.
-     * @dev Only callable by an account with the UPGRADER_ROLE.
-     * @param newImplementation The address of the new implementation.
-     */
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {
-        /* no additional authorization required as onlyRole(UPGRADER_ROLE) is enforced */
+        // OnlyRole modifier enforces authorization.
     }
 
     uint256[50] private __gap;

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-// Instead of global imports, we import only the required symbols.
 import { JiblycoinCore } from "../core/JiblycoinCore.sol";
 import { Errors } from "../libraries/Errors.sol";
 
@@ -10,10 +9,12 @@ error AlreadyProposed();
 /// @notice Thrown when an upgrade was not proposed.
 error NotProposed();
 
-/// @title JiblycoinUpgrade
-/// @notice Manages the upgrade mechanism for Jiblycoin using the UUPS proxy pattern.
-/// @dev Extends JiblycoinCore. Defines an upgrade delay and a mapping for pending upgrades.
-///      Provides functions for proposing and executing upgrades, using custom errors for gas savings.
+/**
+ * @title JiblycoinUpgrade
+ * @notice Manages the upgrade mechanism for Jiblycoin using the UUPS proxy pattern.
+ * @dev Extends JiblycoinCore. Defines an upgrade delay and a mapping for pending upgrades.
+ *      Provides functions for proposing and executing upgrades, using custom errors for gas savings.
+ */
 abstract contract JiblycoinUpgrade is JiblycoinCore {
     /// @notice Upgrade delay (in seconds) required before an upgrade can be executed.
     uint64 public upgradeDelay;

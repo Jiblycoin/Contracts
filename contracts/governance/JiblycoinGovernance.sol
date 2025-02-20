@@ -1,27 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-// solhint-disable func-name-mixedcase
-
-// Use named imports with aliases to avoid global imports.
+import { JiblycoinCore } from "../core/JiblycoinCore.sol";
 import { DiamondStorageLib as DS } from "../libraries/DiamondStorageLib.sol";
 import { Errors as Err } from "../libraries/Errors.sol";
-import { JiblycoinCore } from "../core/JiblycoinCore.sol";
 import { JiblycoinStructs as JStructs } from "../structs/JiblycoinStructs.sol";
 
-// Define custom errors to replace require statements.
+// Custom errors for governance operations
 error VoteNotStarted();
 error VoteEnded();
 error ProposalAlreadyExecuted();
 error VoteNotEnded();
 error QuorumNotMet();
+error InvalidProposalId();
 
-/**
- * @title JiblycoinGovernance
- * @notice Implements governance functionalities for Jiblycoin.
- * @dev Uses centralized storage (via DS) to store governance parameters and proposals.
- *      The library JiblycoinStructs is imported via DS.
- */
+/// @title JiblycoinGovernance
+/// @notice Implements governance functionalities for Jiblycoin.
+/// @dev Uses centralized storage (via DS) to store governance parameters and proposals.
 abstract contract JiblycoinGovernance is JiblycoinCore {
     using DS for DS.DiamondStorage;
 
@@ -47,7 +42,7 @@ abstract contract JiblycoinGovernance is JiblycoinCore {
 
     /**
      * @notice Initializes the governance module.
-     * @param _governanceParams The governance parameters (defined in JStructs).
+     * @param _governanceParams The governance parameters.
      * @param _govPointsCaps The reward cap parameters.
      * @param _adminWallet The address to be assigned as admin.
      */
@@ -98,6 +93,7 @@ abstract contract JiblycoinGovernance is JiblycoinCore {
      */
     function vote(uint64 proposalId) external nonReentrant whenNotPaused {
         DS.DiamondStorage storage ds = DS.diamondStorage();
+        if (proposalId == 0 || proposalId > proposalCount) revert InvalidProposalId();
         JStructs.Proposal storage prop = ds.proposals[proposalId];
         if (block.timestamp < prop.startTime) revert VoteNotStarted();
         if (block.timestamp > prop.endTime) revert VoteEnded();
@@ -116,6 +112,7 @@ abstract contract JiblycoinGovernance is JiblycoinCore {
      */
     function executeProposal(uint64 proposalId) external nonReentrant whenNotPaused {
         DS.DiamondStorage storage ds = DS.diamondStorage();
+        if (proposalId == 0 || proposalId > proposalCount) revert InvalidProposalId();
         JStructs.Proposal storage prop = ds.proposals[proposalId];
         if (block.timestamp <= prop.endTime) revert VoteNotEnded();
         if (prop.executed) revert ProposalAlreadyExecuted();

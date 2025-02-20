@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-// Import only necessary symbols to avoid global imports
+// Import only necessary symbols.
 import { JiblycoinCore } from "../core/JiblycoinCore.sol";
 import { DiamondStorageLib } from "../libraries/DiamondStorageLib.sol";
 import { IJiblycoinNFT } from "../interfaces/IJiblycoinNFT.sol";
@@ -31,6 +31,10 @@ contract StakingManager is JiblycoinCore {
     // ====================================================
     // Administrative Functions
     // ====================================================
+    /**
+     * @notice Sets the oracle contract address for dynamic reward rate adjustments.
+     * @param _oracle The address of the IJiblycoinOracle contract.
+     */
     function setOracle(address _oracle) external onlyRole(ADMIN_ROLE) {
         if (_oracle == address(0)) revert Errors.ZeroAddress();
         DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
@@ -38,12 +42,23 @@ contract StakingManager is JiblycoinCore {
         emit OracleSet(_oracle);
     }
 
+    /**
+     * @notice Sets the NFT contract address for exclusive staking pool eligibility.
+     * @param _nftAddress The address of the NFT contract.
+     */
     function setNFTContractAddress(address _nftAddress) external onlyRole(ADMIN_ROLE) {
         if (_nftAddress == address(0)) revert Errors.ZeroAddress();
         DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
         ds.nftContractAddress = _nftAddress;
     }
 
+    /**
+     * @notice Adds a new staking pool.
+     * @param id The unique identifier for the pool.
+     * @param name The descriptive name of the pool.
+     * @param baseRewardRate The base reward rate.
+     * @param exclusive Whether the pool requires NFT ownership.
+     */
     function addStakingPool(
         uint256 id,
         string memory name,
@@ -64,6 +79,10 @@ contract StakingManager is JiblycoinCore {
         emit StakingPoolAdded(id, name, baseRewardRate, exclusive);
     }
 
+    /**
+     * @notice Adjusts the reward rate for a specified pool based on current market conditions.
+     * @param poolId The pool identifier.
+     */
     function adjustPoolReward(uint256 poolId) external onlyRole(ADMIN_ROLE) {
         DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
         if (ds.stakingPools[poolId].id == 0) revert Errors.PoolDoesNotExist();
@@ -77,6 +96,11 @@ contract StakingManager is JiblycoinCore {
     // ====================================================
     // Staking Functions
     // ====================================================
+    /**
+     * @notice Stakes a specified amount of tokens into a given pool.
+     * @param amount The amount to stake.
+     * @param poolId The pool identifier.
+     */
     function stake(uint256 amount, uint256 poolId) external whenNotPaused nonReentrant {
         DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
         if (amount == 0) revert Errors.CannotStakeZero();
@@ -92,6 +116,11 @@ contract StakingManager is JiblycoinCore {
         emit Staked(msg.sender, amount, poolId);
     }
 
+    /**
+     * @notice Unstakes a specified amount of tokens from a pool.
+     * @param amount The amount to unstake.
+     * @param poolId The pool identifier.
+     */
     function unstake(uint256 amount, uint256 poolId) external whenNotPaused nonReentrant {
         DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
         if (amount == 0) revert Errors.CannotStakeZero();
@@ -104,12 +133,16 @@ contract StakingManager is JiblycoinCore {
         emit Unstaked(msg.sender, amount, poolId);
     }
 
+    /**
+     * @notice Claims accumulated staking rewards from a pool.
+     * @param poolId The pool identifier.
+     */
     function claimRewards(uint256 poolId) external whenNotPaused nonReentrant {
         DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
         if (ds.stakingPools[poolId].id == 0) revert Errors.PoolDoesNotExist();
         _updateRewards(poolId, msg.sender);
         uint256 reward = ds.rewardDebt[poolId][msg.sender];
-        if (reward == 0) revert Errors.InsufficientBalance();
+        if (reward == 0) revert Errors.AlreadyClaimed();
         if (balanceOf(address(this)) < reward) revert Errors.InsufficientBalance();
         ds.rewardDebt[poolId][msg.sender] = 0;
         _transfer(address(this), msg.sender, reward);
@@ -119,6 +152,12 @@ contract StakingManager is JiblycoinCore {
     // ====================================================
     // Internal Utility Functions
     // ====================================================
+    /**
+     * @notice Updates the rewards for a user in a specific pool.
+     * @param poolId The pool identifier.
+     * @param user The address of the staker.
+     * @dev Accrues rewards based on staked amount, current reward rate, and elapsed time.
+     */
     function _updateRewards(uint256 poolId, address user) internal {
         DiamondStorageLib.DiamondStorage storage ds = DiamondStorageLib.diamondStorage();
         JiblycoinStructs.StakingPool storage pool = ds.stakingPools[poolId];
@@ -127,7 +166,8 @@ contract StakingManager is JiblycoinCore {
         uint256 currentTimestamp = block.timestamp;
         uint256 lastReward = ds.lastRewardTimestamp[user][poolId];
         if (lastReward == 0) {
-            lastReward = ds.snapshotId;
+            // If not previously set, initialize to current block timestamp (or ds.snapshotId if defined)
+            lastReward = currentTimestamp;
         }
         uint256 timeElapsed = currentTimestamp - lastReward;
         if (timeElapsed > 0) {

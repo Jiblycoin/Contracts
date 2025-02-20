@@ -7,25 +7,21 @@ import { JiblycoinStructs } from "../structs/JiblycoinStructs.sol";
 import { DiamondStorageLib } from "../libraries/DiamondStorageLib.sol";
 import { Errors } from "../libraries/Errors.sol";
 import { IJiblycoinNFT } from "../interfaces/IJiblycoinNFT.sol";
-// Removed unused import of IJiblycoinOracle
 
 /**
  * @title JiblycoinStaking
  * @notice Implements staking functionality for Jiblycoin.
+ * @dev This contract allows adding staking pools, staking and unstaking tokens, and accrues rewards over time.
  */
 abstract contract JiblycoinStaking is JiblycoinCore {
     // Mapping from pool ID to staking pool details.
     mapping(uint256 => JiblycoinStructs.StakingPool) public stakingPools;
-
     // Array of staking pool IDs.
     uint256[] public poolIds;
-
     // Mapping from pool ID to staked amounts per user.
     mapping(uint256 => mapping(address => uint256)) public stakedAmounts;
-
     // Mapping from pool ID to accrued reward debt per user.
     mapping(uint256 => mapping(address => uint256)) public rewardDebt;
-
     // Mapping from user address and pool ID to the last reward timestamp.
     mapping(address => mapping(uint256 => uint256)) public lastRewardTimestamp;
 
@@ -40,14 +36,13 @@ abstract contract JiblycoinStaking is JiblycoinCore {
      * @notice Internal initializer for staking logic.
      * @dev Intentionally left blank.
      */
-    // solhint-disable-next-line no-empty-blocks
     function __jiblycoinStakingInit() internal onlyInitializing { }
 
     /**
      * @notice Adds a new staking pool.
      * @param id The unique pool identifier.
      * @param name The descriptive name of the pool.
-     * @param baseRewardRate The base reward rate.
+     * @param baseRewardRate The base reward rate (per second, in basis points, scaled appropriately).
      * @param exclusive Whether the pool requires NFT ownership.
      */
     function addStakingPool(
@@ -76,8 +71,9 @@ abstract contract JiblycoinStaking is JiblycoinCore {
     function adjustPoolReward(uint256 poolId) external onlyRole(ADMIN_ROLE) {
         if (stakingPools[poolId].id == 0) revert Errors.PoolDoesNotExist();
         if (address(jiblycoinOracle) == address(0)) revert Errors.OracleNotSet();
-        // jiblycoinOracle is inherited from JiblycoinCore
+        // jiblycoinOracle is inherited from JiblycoinCore.
         uint256 marketFactor = jiblycoinOracle.getMarketConditionFactor();
+        // Calculate new reward rate; assume baseRewardRate and marketFactor are scaled such that division by 10000 is appropriate.
         uint256 newRate = (stakingPools[poolId].baseRewardRate * marketFactor) / 10000;
         stakingPools[poolId].currentRewardRate = newRate;
         emit RewardRateAdjusted(poolId, newRate);
@@ -109,6 +105,7 @@ abstract contract JiblycoinStaking is JiblycoinCore {
     function stake(uint256 amount, uint256 poolId) external whenNotPaused nonReentrant {
         if (amount == 0) revert Errors.CannotStakeZero();
         if (stakingPools[poolId].id == 0) revert Errors.PoolDoesNotExist();
+        // If pool is exclusive, check NFT balance.
         if (stakingPools[poolId].exclusive) {
             IJiblycoinNFT nftContract = IJiblycoinNFT(_getNFTContractAddress());
             if (nftContract.balanceOf(msg.sender) == 0) revert Errors.MustHoldNFT();
@@ -155,6 +152,8 @@ abstract contract JiblycoinStaking is JiblycoinCore {
      * @notice Internal function to update the rewards for a given user and pool.
      * @param poolId The staking pool identifier.
      * @param user The address of the user.
+     * @dev Reward accrual is calculated linearly as:
+     *      earned = (stakedAmount * currentRewardRate * timeElapsed) / 1e4.
      */
     function _updateRewards(uint256 poolId, address user) internal {
         uint256 stakedAmt = stakedAmounts[poolId][user];
@@ -162,8 +161,8 @@ abstract contract JiblycoinStaking is JiblycoinCore {
         uint256 currentTimestamp = block.timestamp;
         uint256 lastReward = lastRewardTimestamp[user][poolId];
         if (lastReward == 0) {
-            // Initialize lastReward with snapshotId if not set
-            lastReward = snapshotId;
+            // If not set, initialize to current block timestamp (or snapshotId from JiblycoinCore if desired)
+            lastReward = currentTimestamp;
         }
         uint256 timeElapsed = currentTimestamp - lastReward;
         if (timeElapsed > 0) {

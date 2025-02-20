@@ -5,9 +5,7 @@ pragma solidity ^0.8.27;
 import { JiblycoinDiamond as DiamondContract } from "./diamond/JiblycoinDiamond.sol";
 
 contract Jiblycoin is DiamondContract {
-    constructor(address _admin, bytes memory _initCalldata)
-        DiamondContract(_admin, _initCalldata)
-    {
+    constructor() DiamondContract(msg.sender, "") {
         // Additional constructor logic (if needed)
     }
 }
